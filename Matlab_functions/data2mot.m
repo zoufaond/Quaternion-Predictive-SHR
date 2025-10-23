@@ -53,7 +53,7 @@ for i=1:size(angles_OS,2)
             fprintf(fid, '%4f  0.000000  0.000000  0.000000  %4f', time(i),angles_OS(j,i));
         elseif j == size(angles_OS,1)
             if size(angles_OS,1) == 10
-                fprintf(fid, '  %4f  0.000000\n', angles_OS(j,i));
+                fprintf(fid, '  %4f  100.000000\n', angles_OS(j,i));
             elseif size(angles_OS,1) == 11
                 fprintf(fid, '  %4f\n', angles_OS(j,i));
             end

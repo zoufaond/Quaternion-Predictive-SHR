@@ -1,0 +1,23 @@
+Euler_101
+ - regul term 1e-5
+ - OS_model_orig
+
+Euler 100
+ - regul term 1e-2
+ - OS_model
+
+Euler 99
+ - regul term 1
+ - OS_model
+
+Quat_203
+ - regul term 1e-5
+ - OS_model_orig
+
+Quat_253
+ - regul term 1e-2
+ - OS_model
+
+Quat 243
+ - regul term 1
+ - OS_model

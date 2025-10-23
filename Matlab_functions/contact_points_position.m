@@ -2,10 +2,8 @@ function [pos_TS,pos_AI] = contact_points_position(q,OS_model)
     jnts = OS_model.joints;
     offset_thorax = jnts{1,2}.location;
     offset_clavicle = jnts{1,5}.location;
-    % TS = OS_model.TSprojection;
-    % AI = OS_model.AIprojection;
-    TS = [-0.121876000000000,-0.022800000000000,0.035900000000000];
-    AI = [-0.116629000000000,-0.140236000000000,0.035900000000000];
+    TS = OS_model.TScontact.translation;
+    AI = OS_model.AIcontact.translation;
     pos_TS = T_trans(offset_thorax) * R_y(q(1)) * R_z(q(2)) * R_x(q(3)) * T_trans(offset_clavicle) * R_y(q(4)) * R_z(q(5)) * R_x(q(6)) * position(TS);
     pos_AI = T_trans(offset_thorax) * R_y(q(1)) * R_z(q(2)) * R_x(q(3)) * T_trans(offset_clavicle) * R_y(q(4)) * R_z(q(5)) * R_x(q(6)) * position(AI);
 end

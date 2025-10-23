@@ -24,6 +24,38 @@ def plot_results(solution, vals , time, num_nodes):
 
     # print(sol_glob-vals_mat)
 
+def initial_guess_from_solution(solution_file,num_free):
+
+    solution = sc.io.loadmat(solution_file)['data'][0,0]
+    initial_guess = solution['solution'][0]
+
+    # initial_guess = np.zeros(num_free)
+    # trajectories = solution['trajectories'][0].transpose().flatten()
+    # initial_guess[0:len(trajectories)] = trajectories
+    return initial_guess
+
+def exp_emg(emg_struct_name,num_nodes,EMG_num):
+    emg_struct = sc.io.loadmat(emg_struct_name)
+    data = emg_struct['data']['num_'+str(EMG_num)]
+    emg_names = ('AnteriorDelt','IntermediateDelt','PosteriorDelt','Infrasp','Suprasp','MiddleTrap','UpperTrap','Serrupper')
+    # print(data[0,0][emg_names[0]])
+    time = np.linspace(0,1,len(data[0,0][emg_names[0]].item()[0]))
+    time_new = np.linspace(0,1,num_nodes)
+    emg_exp = np.zeros([len(emg_names),num_nodes])
+
+    for i in range(len(emg_names)):
+        cs = sc.interpolate.CubicSpline(time,data[0,0][emg_names[i]].item()[0])
+        emg_exp[i,:] = cs(time_new)
+
+    # indexes = (emg_exp[0,:]>1e-4)*1
+    indexes = np.ones(num_nodes,dtype=int)
+    # indexes[30:40] = int(1)
+    # indexes[140:150] = int(1)
+    # indexes[240:250] = int(1)
+    # indexes = np.z
+
+    return emg_exp, indexes
+
 def exp_trajectory_quat(mot_struct_name,num_nodes):
     mot_struct = sc.io.loadmat(mot_struct_name)
     time = mot_struct['mot_struct']['time'][0,0][:,0]
@@ -50,9 +82,9 @@ def exp_trajectory_quat_myobj(trajectory, clav_pos):
         SC_wo_x = Qrm_np(trajectory[0:4,i]) @ position(clav_pos,0,0)
         new_traj[0:3,i] = SC_wo_x[0:3]
         scapula_thorax = mulQuat_np(trajectory[0:4,i],trajectory[4:8,i]).reshape(4,)
-        new_traj[5:8,i] = scapula_thorax[1:4]
+        new_traj[4:8,i] = scapula_thorax[0:4]
         humerus_thorax = mulQuat_np(scapula_thorax,trajectory[8:12,i]).reshape(4,)
-        new_traj[9:12,i] = humerus_thorax[1:4]
+        new_traj[8:12,i] = humerus_thorax[0:4]
 
     return new_traj
 
@@ -146,10 +178,10 @@ def das_trajectory(data_struct,num_nodes,duration,weight, coords):
     
     return traj, init_guess
 
-def sol2mot_quat(solution, num_nodes, num_q, time, file_name = 'traj_opt.mot'):
+def sol2mot_quat(solution, num_nodes, num_q, time, file_name = 'traj_opt.mot', GH_seq = 'YZY'):
     traj_quat = solution[:(num_nodes*num_q)]
     traj_splitted = np.vstack(np.split(traj_quat,num_q)).T
-    joints = ('YZX','YZX','YZY','rev')
+    joints = ('YZX','YZX',GH_seq,'rev')
     traj_eul = np.zeros([num_nodes,10])
 
     # print(np.shape(traj_splitted))
@@ -169,14 +201,17 @@ def sol2mot_quat(solution, num_nodes, num_q, time, file_name = 'traj_opt.mot'):
         print(f'nRows={num_nodes}',file=text_file)
         print(f'nColumns={10+5}',file = text_file)
         print(f'endheader',file = text_file)
-        print(f'time  TH_x TH_y TH_z SC_y  SC_z  SC_x  AC_y  AC_z  AC_x  GH_y  GH_z  GH_yy  EL_x  PS_y',file = text_file)
+        if GH_seq == 'YZY':
+            print(f'time  TH_x TH_y TH_z SC_y  SC_z  SC_x  AC_y  AC_z  AC_x  GH_y  GH_z  GH_yy  EL_x  PS_y',file = text_file)
+        elif GH_seq == 'YZX':
+            print(f'time  TH_x TH_y TH_z SC_y  SC_z  SC_x  AC_y  AC_z  AC_x  GH_y  GH_z  GH_x  EL_x  PS_y',file = text_file)
         
         for i in range(num_nodes):
             for j in range(10):
                 if j == 0 :
                     print(f'{time[i]}  0.000000  0.000000  0.000000  {traj_eul[i,j]}', end = '  ',file = text_file)
                 elif j == 9:
-                    print(f'{traj_eul[i,j]}  0.000000', file = text_file)
+                    print(f'{traj_eul[i,j]}  120.000000', file = text_file)
                 else:
                     print(f'{traj_eul[i,j]}', end = '  ',file = text_file)
                         
@@ -185,7 +220,7 @@ def sol2mot_quat(solution, num_nodes, num_q, time, file_name = 'traj_opt.mot'):
 
     print('Saved to .mot file')
 
-def sol2mot_eul(solution, num_nodes, num_q, time, file_name = 'traj_opt.mot'):
+def sol2mot_eul(solution, num_nodes, num_q, time, file_name = 'traj_opt.mot',GH_seq = 'YZY'):
     traj_eul = np.vstack(np.split(solution[:(num_nodes*num_q)],num_q)).T
     traj_eul = traj_eul*180/np.pi
     
@@ -195,14 +230,17 @@ def sol2mot_eul(solution, num_nodes, num_q, time, file_name = 'traj_opt.mot'):
         print(f'nRows={num_nodes}',file=text_file)
         print(f'nColumns={10+5}',file = text_file)
         print(f'endheader',file = text_file)
-        print(f'time  TH_x TH_y TH_z SC_y  SC_z  SC_x  AC_y  AC_z  AC_x  GH_y  GH_z  GH_yy  EL_x  PS_y',file = text_file)
+        if GH_seq == 'YZY':
+            print(f'time  TH_x TH_y TH_z SC_y  SC_z  SC_x  AC_y  AC_z  AC_x  GH_y  GH_z  GH_yy  EL_x  PS_y',file = text_file)
+        elif GH_seq == 'YZX':
+            print(f'time  TH_x TH_y TH_z SC_y  SC_z  SC_x  AC_y  AC_z  AC_x  GH_y  GH_z  GH_x  EL_x  PS_y',file = text_file)
         
         for i in range(num_nodes):
             for j in range(10):
-                if j == 0 :
+                if j == 0:
                     print(f'{time[i]}  0.000000  0.000000  0.000000  {traj_eul[i,j]}', end = '  ',file = text_file)
                 elif j == 9:
-                    print(f'{traj_eul[i,j]}  0.000000', file = text_file)
+                    print(f'{traj_eul[i,j]}  120.000000', file = text_file)
                 else:
                     print(f'{traj_eul[i,j]}', end = '  ',file = text_file)
                         
@@ -215,11 +253,15 @@ def sol2struct(solution,activations_list,num_q,num_u,num_inputs,num_nodes,time,o
     
     trajectories = np.zeros([num_nodes, num_q])
     speeds = np.zeros([num_nodes, num_u])
+    reactions = np.zeros([num_nodes, 3])
     for i in range(num_q):
         trajectories[:,i] = solution[(i)*num_nodes:(i+1)*num_nodes]
 
     for i in range(num_u):
         speeds[:,i] = solution[(num_q + i)*num_nodes:(num_q + i +1)*num_nodes]
+
+    for i in range(3):
+        reactions[:,i] = solution[(num_q + num_u + i)*num_nodes:(num_q + num_u + i +1)*num_nodes]*800
 
     if torqueDriven is not True:
         activations, excitations = input2mat(solution, num_nodes,num_q,num_u, num_inputs, activations_list, act_dyn)
@@ -236,7 +278,9 @@ def sol2struct(solution,activations_list,num_q,num_u,num_inputs,num_nodes,time,o
                 'excitations': excitations,
                 'speeds': speeds,
                 'time2sol': time2sol,
-                'objective_value': objective_value
+                'objective_value': objective_value,
+                'solution': solution,
+                'reactions': reactions,
                     }
     sc.io.savemat(f'{file_name}', {'data': data})
     print('Saved to .mat file')
@@ -257,14 +301,14 @@ def input2mat(solution, num_nodes, num_q, num_u, num_inputs, activations, act_dy
     for i in range(137):
         try:
             ind = dict_act_index.get(f'act_{i+1}')
-            data_act[:,i] = solution[(num_q + num_u +ind)*num_nodes:(num_q + num_u + ind +1)*num_nodes]
+            data_act[:,i] = solution[(num_q + num_u + 3 +ind)*num_nodes:(num_q + num_u + 3 + ind +1)*num_nodes]
         except:
             continue
 
     for i in range(137):
         try:
             ind = dict_exc_index.get(f'act_{i+1}')
-            data_exc[:,i] = solution[(num_q + num_u + num_inputs + ind)*num_nodes:(num_q + num_u + num_inputs +  ind + 1)*num_nodes]
+            data_exc[:,i] = solution[(num_q + num_u + num_inputs + 3 + ind)*num_nodes:(num_q + num_u + num_inputs + 3 + ind + 1)*num_nodes]
         except:
             continue
 

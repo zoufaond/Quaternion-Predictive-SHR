@@ -1,17 +1,15 @@
-function res = get_conoid_length(q_AC,model)
+function res = get_conoid_length(q_AC,OS_model)
 
-O_pos = model.conoid_origin;
-I_pos = model.conoid_insertion;
-offset_clavicle = model.offset_clavicula;
-        
-O = position(O_pos(1), O_pos(2), O_pos(3));
-TC_S = T_trans(offset_clavicle);
-RC_S = R_y(q_AC(1)) * R_z(q_AC(2)) * R_x(q_AC(3));
-I = TC_S * RC_S * position(I_pos(1), I_pos(2), I_pos(3));
-
-
+O = OS_model.conoid_origin;
+clavicle_offset = OS_model.joints{5}.location;
+Ipos = OS_model.conoid_insertion;
+I = T_trans(clavicle_offset) * YZX_seq(q_AC) * position(Ipos);
 res = sqrt((O(1) - I(1))^2 + (O(2) - I(2))^2 + (O(3) - I(3))^2);
 
+end
+
+function res = YZX_seq(phi_vec)
+    res = R_y(phi_vec(1)) * R_z(phi_vec(2)) * R_x(phi_vec(3));
 end
 
 function trans_x = T_trans(vec)
@@ -42,6 +40,6 @@ function rot_phiz = R_z(phiz)
                 0           ,0      ,0,1];
 end
 
-function r = position(x,y,z)
-    r = [x;y;z;1];
+function r = position(vec)
+    r = [vec(1);vec(2);vec(3);1];
 end

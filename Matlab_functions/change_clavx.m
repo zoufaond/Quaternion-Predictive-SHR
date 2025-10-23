@@ -6,7 +6,7 @@ mot_eul_modified = zeros(size(mot_eul));
 
 for i = 1:numdata
     Rscap = R_scap_glob(mot_eul(i,1:3),mot_eul(i,4:6));
-    new_xrot = mot_eul(i,1:3) + clavicle_xrot_change;
+    new_xrot = [mot_eul(i,1:2),ones(1,numdata)*change_value];
     fun = @(x) sum((Rscap - R_scap_glob(new_xrot,[x(1),x(2),x(3)])).^2,"all");
     x0 = [mot_eul(i,4:6)];
     A = [];

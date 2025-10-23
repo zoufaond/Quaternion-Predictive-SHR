@@ -49,6 +49,12 @@ model.lat_dorsi_mid_wrapping.dimensions = str2num(osim_struct.Model.BodySet.obje
 
 model.lat_dorsi_inf_wrapping.translation = str2num(osim_struct.Model.BodySet.objects.Body(1).WrapObjectSet.objects.WrapEllipsoid(4).translation);
 model.lat_dorsi_inf_wrapping.dimensions = str2num(osim_struct.Model.BodySet.objects.Body(1).WrapObjectSet.objects.WrapEllipsoid(4).dimensions);
+
+model.thoracic_wall.translation = str2num(osim_struct.Model.BodySet.objects.Body(1).WrapObjectSet.objects.WrapEllipsoid(5).translation);
+model.thoracic_wall.dimensions = str2num(osim_struct.Model.BodySet.objects.Body(1).WrapObjectSet.objects.WrapEllipsoid(5).dimensions);
+
+model.AIcontact.translation = str2num(osim_struct.Model.MarkerSet.objects.Marker(7).location);
+model.TScontact.translation = str2num(osim_struct.Model.MarkerSet.objects.Marker(8).location);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % BASICS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -494,7 +500,7 @@ end
 % add polynomial GH force vector information to the muscles that cross GH
 % this is not required for the Autolev and MEX files, so it is optional
 if nargin>2
-    poly_GH = load(GHpolyfile);
+    poly_GH = load([GHpolyfile,'_quat']);
     for imus=1:model.nMus
         current_mus = poly_GH.GH_model{imus};
         if isempty(current_mus)
@@ -556,12 +562,12 @@ end
 % The stiffness and length of the conoid ligament have been chosen so that
 % the force-displacement curve matches human cadaver measurements described in Harris et al.
 % Am J Sports Med, vol.28, 2000, pp.103-8.
-
-model.conoid_eps	= 0.001;	% epsilon for conoid force-length model
-model.conoid_stiffness = 80000;	% stiffness of conoid
-model.conoid_length = 0.0174;	% length (m) of conoid ligament
-model.conoid_origin =  [0.1365, 0.0206, 0.0136];	% coordinates of conoid origin in clavicle frame
-model.conoid_insertion = [-0.0536, -0.0009, -0.0266];	% coordinates of conoid insertion in scapula frame
+% 
+model.conoid_eps	= 1e-1;	% epsilon for conoid force-length model
+model.conoid_stiffness = 1e4;	% stiffness of conoid
+model.conoid_length = 0.014;	% length (m) of conoid ligament
+model.conoid_origin =  [0.118100000000000,-0.011400000000000,-0.010000000000000];	% coordinates of conoid origin in clavicle frame
+model.conoid_insertion = [-0.004000000000000,-0.022260000000000,-0.030240000000000];	% coordinates of conoid insertion in scapula frame
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % SCAPULA-THORAX CONTACT MODEL

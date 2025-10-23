@@ -1,7 +1,8 @@
-function [time_training_full,trajectory_training_full] = noise2data(trajectory_training, clavicle_xrot_vals,noise_upper,noise_lower,noise_nearGH,num_noised, OS_model,GH_seq, thorax_dimensions)
+function [time_training_full,trajectory_training_full] = noise2data(trajectory_training, clavicle_xrot_vals,noise_upper,noise_lower,noise_nearGH,num_noised, OS_model,osim_file,GH_seq)
 
 trajectory_training_full = [];
 numdata_training = length(trajectory_training(:,1));
+
 for i=1:numdata_training
 
     NU = noise_upper;
@@ -12,8 +13,8 @@ for i=1:numdata_training
         % scaleY = (1.1-trajectory_training(i,8)/max(trajectory_training(:,8)));
         NU(7) = noise_nearGH(1);
         NU(9) = noise_nearGH(1);
-        NL(7) = -noise_nearGH(1);
-        NL(9) = -noise_nearGH(1);
+        NL(7) = noise_nearGH(2);
+        NL(9) = noise_nearGH(2);
         noise = NL + (NU-NL).*rand(1,11);
     else
         noise = NL + (NU-NL).*rand(1,11);
@@ -22,16 +23,20 @@ for i=1:numdata_training
 
         % Check if any of the insertion points of serratus and lats muscles
         % are in the wrapping object, if so, ignore this sample (OpenSim would throw NaN value of moment arm)
-        if is_in_thorax_humerus(trajectory_noised,OS_model) == 1 || is_in_thorax_scap(trajectory_noised,OS_model) == 1
+        if is_in_thorax_humerus(trajectory_noised,OS_model) == 1
+            continue
+        end
+
+        if is_in_thorax_scap(trajectory_noised,OS_model) == 1
             continue
         end
         % 
         % Check if the contact points are close to thorax elipsoid
-        [is_scap_close,~] = is_close_to_thorax(trajectory_noised,OS_model,0.1,0.1,thorax_dimensions);
+        [is_scap_close,~] = is_close_to_thorax(trajectory_noised,OS_model,0.3,0.5,0,0.1);
         if  is_scap_close == 0
             continue
         end
-
+        % momarm = is_serr_momarm_nan(trajectory_noised,osim_file);
         % trajectory_training_full = [trajectory_training_full; trajectory_noised]; 
         
         for ival = 1:length(clavicle_xrot_vals)
@@ -47,43 +52,21 @@ time_training_full = linspace(0,1,size(trajectory_training_full,1));
 
 end
 
-function res = min_conoid_length(traj)
-    fun = @(x) conoid_length(x(2:4));
-    % fun = @(x) sum((Rscap - R_scap_glob([traj(1),traj(2),x(1)],[x(2),x(3),x(4)])).^2,"all");
-    nonlcon = @(x) mycon(x,traj);
-    A = [];
-    b = [];
-    Aeq = [];
-    beq = [];
-    lb = ones(1,4)*(-pi);
-    ub = ones(1,4)*pi;
-    x0 = traj(3:6);
-    x = fmincon(fun,x0,A,b,Aeq,beq,lb,ub,nonlcon);
-    
-    mot_eul_modified = traj;
-    mot_eul_modified(3:6) = x;
-    res = mot_eul_modified;
-end
-
-function [c,ceq] = mycon(x,traj)
-    Rscap = R_scap_glob(traj(1:3),traj(4:6));
-    ceq = Rscap - R_scap_glob([traj(1),traj(2),x(1)],[x(2),x(3),x(4)]);
-    c = [];
-end
-
-function res = conoid_length(AC)
-    O = [0.1165,-0.0041,0.0143];
-    I = T_trans([0.1575,0,0]) * YZX_seq(AC) * position([-0.0536, -0.0009, -0.0266]);
-    res = sqrt((O(1) - I(1))^2 + (O(2) - I(2))^2 + (O(3) - I(3))^2);
-end
-
-function [res,Eeq1,Eeq2] = is_close_to_thorax(q,OS_model,mean_val,range_val,thorax_dimensions)
+function [res,Eeq1,Eeq2] = is_close_to_thorax(q,OS_model,TSmean,TSrange,AImean,AIrange)
     [pos_TS,pos_AI] = contact_points_position(q,OS_model);
-    Epos = [0 -0.1521 0.0621];
-    Edim = thorax_dimensions;
+    Epos = OS_model.thoracic_wall.translation;
+    Edim = OS_model.thoracic_wall.dimensions;
     Eeq1 = elips_eq(pos_TS,Epos,Edim);
     Eeq2 = elips_eq(pos_AI,Epos,Edim);
+
+    % if abs(TSmean - Eeq1) < TSrange && abs(AImean - Eeq2) < AIrange
+    %     res = 1;
+    % else
+    %     res = 0;
+    % end
     val = sqrt(Eeq1^2+Eeq2^2);
+    mean_val = TSmean;
+    range_val = TSrange;
     if abs(mean_val - val) < range_val
         res = 1;
     else
@@ -187,4 +170,50 @@ end
 
 function res = YZX_seq(phi_vec)
     res = R_y(phi_vec(1)) * R_z(phi_vec(2)) * R_x(phi_vec(3));
+end
+
+function res = is_serr_momarm_nan(angles,osimfile)
+    for i = 25:36
+        res = opensim_get_polyvalues(angles, i, osimfile)
+    end
+end
+
+function minusdLdq = opensim_get_polyvalues(angles, iMus, osimfile)
+import org.opensim.modeling.*
+Mod = Model(osimfile);
+SimEn = SimbodyEngine();
+SimEn.connectSimbodyEngineToModel(Mod);
+groundbody = Mod.getBodySet().get('thorax');
+scapulabody = Mod.getBodySet().get('scapula_r');
+% initialize the system to get the initial state
+state = Mod.initSystem;
+
+Mod.equilibrateMuscles(state);
+
+% If we only want one moment arm, put it in a cell
+CoordSet = Mod.getCoordinateSet();
+
+% get the muscle
+% currentMuscle = Mod.getMuscles().get(Mus);
+currentMuscle = Mod.getMuscles().get(iMus-1);
+% if ~strcmp(fixname(char(currentMuscle.getName())),Mus)
+%     error('Current muscle name is incorrect')
+% end
+angles = [0 0 0 angles];
+minusdLdq = zeros(1,6);
+nDofs = CoordSet.getSize;
+    
+% set dof values for this step
+for idof = 1:nDofs
+    currentDof = CoordSet.get(idof-1);    
+    currentDof.setValue(state,angles(idof),1);
+end
+
+% get moment arms
+Dofs = [4,5,6,7,8,9];
+for idof = 1:6 %only serratus
+
+    currentDof = CoordSet.get(Dofs(idof)-1);
+    minusdLdq(idof) = currentMuscle.computeMomentArm(state,currentDof);
+end
 end

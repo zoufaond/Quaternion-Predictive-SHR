@@ -43,8 +43,8 @@ angles = deg2rad(data_motion(:,2:end));
 
 %% for each muscle...
 if strcmp(gen_polyvalues,'gen_polyvalues')
-    for imus = 1:length(model.muscles)
-    % %for imus = 116:138
+    % for imus = 1:length(model.muscles)
+    for imus = 60:62
         mus = model.muscles{imus};
     
         alljntsQ = [];
@@ -75,12 +75,13 @@ if strcmp(gen_polyvalues,'gen_polyvalues')
             if any(strcmp('GHy',mus.dof_names))
                 [alllengths, allmomarms,quat_J, allGHfvecs] = opensim_get_polyvalues(Mod, alljnts, alljntsQ, mus.name, imus, mus.dof_indeces, GH_seq, SimEn, groundbody, scapulabody);
                 save([motion_path,'\',mydir '\path_' mus.name],'alljnts','alllengths','alljntsQ','alljntsQA','allmomarms','quat_J');        
-                save([motion_path,'\',mydir '\GHfvec_' mus.name],'alljnts','allGHfvecs');        
+                save([motion_path,'\',mydir '\GHfvec_' mus.name],'alljnts','allGHfvecs','alljntsQ','alljntsQA');        
                 disp([mus.name, ' lengths, moment arms and GH force vectors saved.']);
             else
-                [alllengths, allmomarms, quat_J] = opensim_get_polyvalues(Mod, alljnts, alljntsQ, mus.name, imus, mus.dof_indeces, GH_seq);
-                save([motion_path,'\',mydir '\path_' mus.name],'alljnts','alllengths','alljntsQ','alljntsQA','allmomarms','quat_J');        
-                disp([mus.name, ' lengths and moment arms saved.']);
+                % [alllengths, allmomarms, quat_J] = opensim_get_polyvalues(Mod, alljnts, alljntsQ, mus.name, imus, mus.dof_indeces, GH_seq);
+                % save([motion_path,'\',mydir '\path_' mus.name],'alljnts','alllengths','alljntsQ','alljntsQA','allmomarms','quat_J');        
+                % disp([mus.name, ' lengths and moment arms saved.']);
+                continue
             end
     
             % make_mot_file([motion_path,'\',mydir '\angles_' mus.name '.mot'],alljnts,dof_names);
@@ -99,7 +100,8 @@ end
 if nargin>5, musclepath_poly(muscles,mydir,motion_path,musclepolyfile); end
 
 %% generate polynomial approximations of GH lines of action
-% if nargin>5, GH_poly(muscles,mydir,GHpolyfile); end
+% if nargin>5, GH_poly(muscles,mydir,musclepolyfile); end
+if nargin>5, GH_poly(muscles,mydir,motion_path,musclepolyfile); end
 
 
 %=============================================================================================
@@ -395,7 +397,7 @@ function musclepath_poly(muscles,mydir,motion_path,musclepolyfile)
 %% open files and read in moment arms
 format long;			% so we get full precision output for polynomial coefficients
 
-for EULorQ = 1:2
+for EULorQ = 2:2
 if EULorQ == 1
     current_poly = 'Euler';
 elseif EULorQ == 2
@@ -429,7 +431,8 @@ if exist(matfilename,'file')
 end
 
 %% main loop for each muscle element
-for imus = 1:length(muscles)
+% for imus = 1:length(muscles)
+for imus = 60:62
     
     % get moment arms and lengths out of the .mat files
     musfilename = [motion_path,'\',mydir,'\path_',muscles{imus}.name,'.mat'];
@@ -554,7 +557,7 @@ for imus = 1:length(muscles)
         [RMSmin, col] = min(RMSnew);
         % if the change in error is less than 5%, stop without adding this term
        % if ((i>1)&&((RMS - RMSmin)/RMS<0.01))
-        if ((i>1)&&((RMS - RMSmin)/RMS<0.02))
+        if ((i>1)&&((RMS - RMSmin)/RMS<0.03))
             fprintf('Change in error: %3f. No more terms added.\n ',(RMS - RMSmin)/RMS);
             fprintf(logfile,'Change in error: %3f. No more terms added.\n ',(RMS - RMSmin)/RMS);
             break;
@@ -708,7 +711,7 @@ end
 fclose(motfile);
 
 %=============================================================================================
-function GH_poly(muscles,mydir,musclepolyfile)
+function GH_poly(muscles,mydir,motion_path,musclepolyfile)
 
 % Based on pathpoly.m by Ton van den Bogert
 %
@@ -733,7 +736,8 @@ function GH_poly(muscles,mydir,musclepolyfile)
 format long;			% so we get full precision output for polynomial coefficients
 
 % log file (output)
-logfilename = [mydir '\GHpoly.log'];
+% logfilename = [mydir '\GHpoly.log'];
+logfilename = [motion_path,'\',mydir '\GH_poly_quat.log'];
 logfile = fopen(logfilename,'w');
 if (logfile < 0)
     errordlg(['Could not open log file ',logfilename,' for writing'],'File Error');
@@ -742,7 +746,8 @@ if (logfile < 0)
 end
 
 % results file (output)
-polyfilename = [mydir '\' musclepolyfile '.txt'];
+% polyfilename = [mydir '\' musclepolyfile '.txt'];
+polyfilename = [motion_path,'\',mydir '\' musclepolyfile '_quat.txt'];
 polyfile = fopen(polyfilename,'w');
 if (polyfile < 0)
     errordlg(['Could not open results file ',polyfilename,' for writing'],'File Error');
@@ -751,7 +756,8 @@ if (polyfile < 0)
 end
 
 % mat file, if it exists, append, don't overwrite
-matfilename = [motion_path,'\',mydir '\' musclepolyfile '.mat'];
+% matfilename = [motion_path,'\',mydir '\' musclepolyfile '.mat'];
+matfilename = [motion_path,'\',mydir '\' musclepolyfile '_quat.mat'];
 % if exist(matfilename,'file')
 %     polys = load(matfilename);
 %     GH_model = polys.GH_model;
@@ -773,8 +779,11 @@ for imus = 1:length(muscles)
     if ~crossGH, continue; end
     
     % get force vectors out of the .mat files
-    musfilename = [mydir,'\GHfvec_',muscles{imus}.name,'.mat'];
+    % musfilename = [mydir,'\GHfvec_',muscles{imus}.name,'.mat'];
+    musfilename = [motion_path,'\',mydir,'\GHfvec_',muscles{imus}.name,'.mat'];
+    musfilename_mom = [motion_path,'\',mydir,'\path_',muscles{imus}.name,'.mat'];
     ma = load(musfilename);
+    mamom = load(musfilename_mom);
         
     mus = muscles{1,imus};
     ndofs = length(mus.dof_indeces); % number of dofs spanned by this muscle
@@ -804,7 +813,8 @@ for imus = 1:length(muscles)
         % read data from GHfvector matrix
         % take fvector and angles from the right columns
         b = ma.allGHfvecs(:,i);
-        ang = (ma.alljnts(:,musdof_indeces) + 1e-6);	% protect against angle = 0.0
+        % ang = (ma.alljnts(:,musdof_indeces) + 1e-6);	% protect against angle = 0.0
+        ang = mamom.alljntsQA(:,musdof_indeces);
 
         % generate the npar polynomial terms, and for each term, add a column to A
         polylist = zeros(npar,ndofs);
@@ -863,7 +873,7 @@ for imus = 1:length(muscles)
             % now determine which expanded model had the lowest RMS
             [RMSmin, col] = min(RMSnew);
             % if the change in error is less than 5%, stop without adding this term 
-            if ((ii>1)&&((RMS - RMSmin)/RMS<0.05))
+            if ((ii>1)&&((RMS - RMSmin)/RMS<0.045))
                 fprintf('Change in error: %3f. No more terms added.\n ',(RMS - RMSmin)/RMS);
                 fprintf(logfile,'Change in error: %3f. No more terms added.\n ',(RMS - RMSmin)/RMS);
                 break;
@@ -891,9 +901,9 @@ for imus = 1:length(muscles)
             A = [A(:,1:(col-1)) A(:,(col+1):ncolumns)];
             polylist = [polylist(1:(col-1),:);polylist((col+1):ncolumns,:)];           
             % stop adding terms if RMS error in fvectors is less than 10% of range, 
-            if (RMS<=0.1*vecrange)
-                break;
-            end
+            % if (RMS<=0.1*vecrange)
+            %     break;
+            % end
         end 		% and go find the next term
 
         % write this muscle's model on the output file

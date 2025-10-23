@@ -1,6 +1,23 @@
+clear all
+% hand
+% weight = 90;
+% height = 180;
+% coefs_hand = [-0.1165,0.0036,0.00175];
+% mass_hand = coefs_hand(1)+coefs_hand(2)*weight+coefs_hand(3)*height
+% coefs_forearm = [0.3185,0.01445,-0.00114];
+% mass_forearm = coefs_forearm(1)+coefs_forearm(2)*weight+coefs_forearm(3)*height
+% coefs_upperarm = [0.250,0.03012,-0.027];
+% mass_upperarm = coefs_upperarm(1)+coefs_upperarm(2)*weight+coefs_upperarm(3)*height
 clearvars
 N = 10000;
 vnorm = linspace(-1,1,N);
+% l_mus = linspace(0.5,1.5,N);
+lopt = 0.0105;
+r = 0.02;
+phi = linspace(0,pi/2,N);
+l_mus = phi*r/(pi/6*r)
+% 
+
 f_gauss = 0.25;
 kpe = 5;
 epsm0 = 0.6;
@@ -8,11 +25,15 @@ epsm0 = 0.6;
 % f = switcher(lnorm,100);
 for i=1:N
     % f_ch(i) = fvce_chad(vnorm(i));
-    f_th(i) = fvce_T03(vnorm(i));
-    f_gr(i) = fvce_groot(vnorm(i));
+    % f_th(i) = fvce_T03(vnorm(i));
+    % f_gr(i) = fvce_groot(vnorm(i));
+    valpee(i) = pee(l_mus(i),1);
+    % valactee(i) = actee(l_mus(i));
 end
-plot(vnorm,f_th, vnorm, f_gr)
-legend('Thelen','groot')
+figure
+% plot(vnorm, f_gr)
+% legend('Thelen','groot')
+plot(l_mus,valpee)
 
 % pp = polyfit(vnorm, f_ch,2);
 % fitted = polyval(pp,vnorm);
@@ -26,6 +47,20 @@ legend('Thelen','groot')
 function res = switcher(val,thresh,scale)
     res = (tanh(scale*(val-thresh))+1)/2;
 
+end
+
+function res = actee(l_mus)
+f_gauss = 0.25;
+kpe = 5;
+epsm0 = 0.6;
+res = (exp(-(l_mus - 1)^2 / f_gauss));
+
+end
+
+function res = pee(lm, lceopt)
+    kpe = 5;
+    epsm0 = 0.6;
+    res = (exp(kpe*(lm / lceopt - 1)/epsm0)-1)/(exp(kpe)-1)*0.04*0.02;
 end
 
 function fvce = fvce_groot(vce)

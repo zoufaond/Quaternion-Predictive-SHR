@@ -1,0 +1,4 @@
+Euler 100, Quat 243
+ - OS_orig no GL
+ - regul 1
+
