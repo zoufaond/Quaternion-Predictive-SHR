@@ -29,37 +29,33 @@ def initial_guess_from_solution(solution_file,num_free):
     solution = sc.io.loadmat(solution_file)['data'][0,0]
     initial_guess = solution['solution'][0]
 
-    # initial_guess = np.zeros(num_free)
-    # trajectories = solution['trajectories'][0].transpose().flatten()
-    # initial_guess[0:len(trajectories)] = trajectories
     return initial_guess
 
 def exp_emg(emg_struct_name,num_nodes,EMG_num):
     emg_struct = sc.io.loadmat(emg_struct_name)
     data = emg_struct['data']['num_'+str(EMG_num)]
     emg_names = ('AnteriorDelt','IntermediateDelt','PosteriorDelt','Infrasp','Suprasp','MiddleTrap','UpperTrap','Serrupper')
-    # print(data[0,0][emg_names[0]])
     time = np.linspace(0,1,len(data[0,0][emg_names[0]].item()[0]))
     time_new = np.linspace(0,1,num_nodes)
     emg_exp = np.zeros([len(emg_names),num_nodes])
+    valid_mask = ~np.isnan(data[0,0][emg_names[0]].item()[0])
+    cs_mask = sc.interpolate.CubicSpline(time, valid_mask.astype(float))
+    indexes = (cs_mask(time_new) > 0.5).astype(int)
 
     for i in range(len(emg_names)):
-        cs = sc.interpolate.CubicSpline(time,data[0,0][emg_names[i]].item()[0])
+        signal = data[0,0][emg_names[i]].item()[0].copy()
+        signal[~valid_mask] = 0.0
+        cs = sc.interpolate.CubicSpline(time, signal)
         emg_exp[i,:] = cs(time_new)
-
-    # indexes = (emg_exp[0,:]>1e-4)*1
-    indexes = np.ones(num_nodes,dtype=int)
-    # indexes[30:40] = int(1)
-    # indexes[140:150] = int(1)
-    # indexes[240:250] = int(1)
-    # indexes = np.z
 
     return emg_exp, indexes
 
-def exp_trajectory_quat(mot_struct_name,num_nodes):
+def exp_trajectory_quat(mot_struct_name,interval_value):
     mot_struct = sc.io.loadmat(mot_struct_name)
     time = mot_struct['mot_struct']['time'][0,0][:,0]
     duration = time[-1]
+    num_nodes = int(duration / interval_value)
+    # print(num_nodes)
     time_new = np.linspace(0,duration,num_nodes)
     
     quat_coords = mot_struct['mot_struct']['quat'][0,0]
@@ -71,8 +67,88 @@ def exp_trajectory_quat(mot_struct_name,num_nodes):
     for i in range(num_coords):
         cs = sc.interpolate.CubicSpline(time,quat_coords[:,i])
         trajectory[i,:] = cs(time_new)
+
+    omega = angular_velocity_from_quaternions(trajectory, interval_value)
     
-    return trajectory, interval_value, time_new #, x0
+    return trajectory, omega, num_nodes, time_new #, x0
+
+def quat_conjug(q):
+    """Quaternion conjugate"""
+    w, x, y, z = q
+    return np.array([w, -x, -y, -z])
+
+def quat_multi(q1, q2):
+    """Quaternion multiplication"""
+    w1, x1, y1, z1 = q1
+    w2, x2, y2, z2 = q2
+    return np.array([
+        w1*w2 - x1*x2 - y1*y2 - z1*z2,
+        w1*x2 + x1*w2 + y1*z2 - z1*y2,
+        w1*y2 - x1*z2 + y1*w2 + z1*x2,
+        w1*z2 + x1*y2 - y1*x2 + z1*w2
+    ])
+
+def angular_velocity_from_quaternions(trajectory, dt):
+    """
+    trajectory: (12, num_nodes)
+    returns: (9, num_nodes)
+    """
+    _, num_nodes = trajectory.shape
+    omega = np.zeros((10, num_nodes))
+
+    for i in range(num_nodes - 1):
+        for j in range(3):  # 3 quaternions per node
+            idx = 4 * j
+
+            qk = trajectory[idx:idx+4, i]
+            qk1 = trajectory[idx:idx+4, i+1]
+
+            # normalize defensively
+            qk /= np.linalg.norm(qk)
+            qk1 /= np.linalg.norm(qk1)
+
+            dq = quat_multi(qk1, quat_conjug(qk))
+
+            # ensure shortest rotation
+            if dq[0] < 0:
+                dq = -dq
+
+            omega_vec = (1.0 / dt) * quat_log(dq)
+            omega[3*j:3*j+3, i] = omega_vec
+
+    # last node: copy previous (or set zero)
+    omega[:, -1] = omega[:, -2]
+    omega[-1,:-1] = (trajectory[-1,1:]-trajectory[-1,:-1]) / dt
+
+    return omega
+
+def quat_log(q, eps=1e-12):
+    """
+    Quaternion logarithm.
+    Input: unit quaternion [w, x, y, z]
+    Output: 3-vector
+    """
+    w = np.clip(q[0], -1.0, 1.0)
+    v = q[1:]
+    v_norm = np.linalg.norm(v)
+
+    if v_norm < eps:
+        return np.zeros(3)
+
+    theta = 2.0 * np.arctan2(v_norm, w)
+    return theta * v / v_norm
+
+def numeric_velocity_from_trajectory(trajectory, dt):
+    """Compute per-coordinate velocity from sampled trajectory using numeric difference."""
+    if dt <= 0:
+        raise ValueError("dt must be positive")
+
+    velocity = np.zeros_like(trajectory)
+
+    velocity[:, :-1] = np.diff(trajectory, axis=1) / dt
+    velocity[:, -1] = velocity[:, -2]
+
+    return velocity
 
 def exp_trajectory_quat_myobj(trajectory, clav_pos):
     new_traj = trajectory.copy()
@@ -88,24 +164,26 @@ def exp_trajectory_quat_myobj(trajectory, clav_pos):
 
     return new_traj
 
-def exp_trajectory_eul(mot_struct_name,num_nodes):
+def exp_trajectory_eul(mot_struct_name,interval_value):
     mot_struct = sc.io.loadmat(mot_struct_name)
     time = mot_struct['mot_struct']['time'][0,0][:,0]
     duration = time[-1]
+    num_nodes = int(duration / interval_value)
+    print(num_nodes)
+    num_nodes = 101
     time_new = np.linspace(0,duration,num_nodes)
     
     eul_coords = mot_struct['mot_struct']['euler'][0,0] #mot_euler_mod
     num_coords = np.shape(eul_coords)[1]
     eul_new = np.zeros([num_coords,num_nodes])
-    interval_value = duration/(num_nodes - 1)
-    # x0 = mot_struct['mot_struct']['mot_euler_IC'][0,0][0]
     
     for i in range(num_coords):
         cs = sc.interpolate.CubicSpline(time,eul_coords[:,i])
         eul_new[i,:] = cs(time_new)
     trajectory = eul_new
-    
-    return trajectory, interval_value, time_new #, x0
+    velocity = numeric_velocity_from_trajectory(trajectory, interval_value)
+
+    return trajectory, velocity, num_nodes, time_new #, x0
 
 def exp_trajectory_eul_myobj(trajectory, GH_seq = 'YZY'):
     new_traj = trajectory.copy()
@@ -249,7 +327,7 @@ def sol2mot_eul(solution, num_nodes, num_q, time, file_name = 'traj_opt.mot',GH_
 
     print('Saved to .mot file')
 
-def sol2struct(solution,activations_list,num_q,num_u,num_inputs,num_nodes,time,objective_value,time2sol,file_name,act_dyn = False,torqueDriven = False):
+def sol2struct(solution,activations_list,num_q,num_u,num_faux,num_inputs,num_nodes,time,objective_value,time2sol,file_name,act_dyn = False,torqueDriven = False):
     
     trajectories = np.zeros([num_nodes, num_q])
     speeds = np.zeros([num_nodes, num_u])
@@ -260,16 +338,16 @@ def sol2struct(solution,activations_list,num_q,num_u,num_inputs,num_nodes,time,o
     for i in range(num_u):
         speeds[:,i] = solution[(num_q + i)*num_nodes:(num_q + i +1)*num_nodes]
 
-    for i in range(3):
+    for i in range(num_faux):
         reactions[:,i] = solution[(num_q + num_u + i)*num_nodes:(num_q + num_u + i +1)*num_nodes]*800
 
     if torqueDriven is not True:
-        activations, excitations = input2mat(solution, num_nodes,num_q,num_u, num_inputs, activations_list, act_dyn)
+        activations, excitations = input2mat(solution, num_nodes,num_q,num_u, num_faux, num_inputs, activations_list, act_dyn)
     else:
         activations = np.zeros([num_nodes, num_inputs])
         excitations = np.zeros([num_nodes, num_inputs])
         for i in range(num_inputs):
-            activations[:,i] = solution[(num_q + num_u + i)*num_nodes:(num_q + num_u + i +1)*num_nodes]
+            activations[:,i] = solution[(num_q + num_u + num_faux + i)*num_nodes:(num_q + num_u + num_faux + i +1)*num_nodes]
 
     data = {
                 'tout': time,
@@ -285,7 +363,7 @@ def sol2struct(solution,activations_list,num_q,num_u,num_inputs,num_nodes,time,o
     sc.io.savemat(f'{file_name}', {'data': data})
     print('Saved to .mat file')
 
-def input2mat(solution, num_nodes, num_q, num_u, num_inputs, activations, act_dyn):
+def input2mat(solution, num_nodes, num_q, num_u, num_faux, num_inputs, activations, act_dyn):
     activations_str = [str(activations[x]).replace('(t)','') for x in range(len(activations))]
     act_index = np.linspace(0,137,138,dtype=int)
 
@@ -301,14 +379,17 @@ def input2mat(solution, num_nodes, num_q, num_u, num_inputs, activations, act_dy
     for i in range(137):
         try:
             ind = dict_act_index.get(f'act_{i+1}')
-            data_act[:,i] = solution[(num_q + num_u + 3 +ind)*num_nodes:(num_q + num_u + 3 + ind +1)*num_nodes]
+            data_act[:,i] = solution[(num_q + num_u + num_faux +ind)*num_nodes:(num_q + num_u + num_faux + ind +1)*num_nodes]
+            # data_act[:,i] = solution[(num_q + num_u +ind)*num_nodes:(num_q + num_u + ind +1)*num_nodes]
         except:
             continue
 
     for i in range(137):
         try:
             ind = dict_exc_index.get(f'act_{i+1}')
-            data_exc[:,i] = solution[(num_q + num_u + num_inputs + 3 + ind)*num_nodes:(num_q + num_u + num_inputs + 3 + ind + 1)*num_nodes]
+            data_exc[:,i] = solution[(num_q + num_u + num_inputs + num_faux + ind)*num_nodes:(num_q + num_u + num_inputs + 3 + ind + 1)*num_nodes]
+            # data_exc[:,i] = solution[(num_q + num_u + num_inputs + ind)*num_nodes:(num_q + num_u + num_inputs + ind + 1)*num_nodes]
+
         except:
             continue
 

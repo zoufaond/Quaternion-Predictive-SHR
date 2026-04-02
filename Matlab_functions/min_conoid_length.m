@@ -9,7 +9,8 @@ function res = min_conoid_length(traj, OS_model)
     lb = ones(1,4)*(-pi/2);
     ub = ones(1,4)*pi/2;
     x0 = traj(3:6);
-    x = fmincon(fun,x0,A,b,Aeq,beq,lb,ub,nonlcon);
+    options = optimoptions('fmincon','Display','none');
+    x = fmincon(fun,x0,A,b,Aeq,beq,lb,ub,nonlcon,options);
 
     mot_eul_modified = traj;
     mot_eul_modified(3:6) = x;

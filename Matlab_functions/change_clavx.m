@@ -13,8 +13,8 @@ for i = 1:numdata
     b = [];
     Aeq = [];
     beq = [];
-    
-    x = fmincon(fun,x0,A,b,Aeq,beq);
+    options = optimoptions('fmincon','Display','none');
+    x = fmincon(fun,x0,A,b,Aeq,beq,[],[],[],options);
 
     mot_eul_modified(i,1:3) = new_xrot;
     mot_eul_modified(i,4:6) = x;

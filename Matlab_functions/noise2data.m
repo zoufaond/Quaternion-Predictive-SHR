@@ -3,23 +3,53 @@ function [time_training_full,trajectory_training_full] = noise2data(trajectory_t
 trajectory_training_full = [];
 numdata_training = length(trajectory_training(:,1));
 
-for i=1:numdata_training
+for i=1:7:numdata_training
 
     NU = noise_upper;
     NL = noise_lower;
+    R_hum_quat = [];
+    for iframe = 1:12:numdata_training
+        for inoise = 1:1
+            if strcmp(GH_seq,'YZY') && abs(trajectory_training(i,8)) < deg2rad(15)
+                % scaleY = (1.1-trajectory_training(i,8)/max(trajectory_training(:,8)));
+                NU(7) = noise_nearGH(1);
+                NU(9) = noise_nearGH(1);
+                NL(7) = noise_nearGH(2);
+                NL(9) = noise_nearGH(2);
+                noise = NL + (NU-NL).*rand(1,11);
+            else
+                noise = NL + (NU-NL).*rand(1,11);
+            end
+    
+            R_hum_noised = trajectory_training(iframe,7:9) + noise(7:9);
+            R_hum_noised_global = R_hum_glob([trajectory_training(iframe,1:6),R_hum_noised]);
+            R_hum_quat = [R_hum_quat; rotm2quat(R_hum_noised_global(1:3,1:3))];
+        end
+    
+    end
 
     for inoise = 1:num_noised
-    if strcmp(GH_seq,'YZY') && abs(trajectory_training(i,8)) < deg2rad(15)
-        % scaleY = (1.1-trajectory_training(i,8)/max(trajectory_training(:,8)));
-        NU(7) = noise_nearGH(1);
-        NU(9) = noise_nearGH(1);
-        NL(7) = noise_nearGH(2);
-        NL(9) = noise_nearGH(2);
-        noise = NL + (NU-NL).*rand(1,11);
-    else
-        noise = NL + (NU-NL).*rand(1,11);
-    end
-        trajectory_noised = trajectory_training(i,:) + noise;
+        
+    for ihum = 1:size(R_hum_quat,1)
+        trajectory_noised = trajectory_training(i,:) + (NL + (NU-NL).*rand(1,11))/2;
+        R_scap_G = R_scap_glob(trajectory_noised(1:3),trajectory_noised(4:6));
+        R_hum_glob_matrix = quat2rotm(R_hum_quat(ihum,:));
+        x0hum = quat2eul(R_hum_quat(ihum,:),'YZY');
+        R_hum_local = calculate_GH_local(R_scap_G,[R_hum_glob_matrix,zeros(3,1);zeros(1,3),1],x0hum);
+        
+        trajectory_noised(7:9) = R_hum_local;
+
+        
+
+        % if excessive GH motion, continue
+        if trajectory_noised(8) > 110*pi/180 
+            continue
+        end
+
+        if trajectory_noised(8) < -20*pi/180 
+            continue
+        end
+        
 
         % Check if any of the insertion points of serratus and lats muscles
         % are in the wrapping object, if so, ignore this sample (OpenSim would throw NaN value of moment arm)
@@ -32,7 +62,7 @@ for i=1:numdata_training
         end
         % 
         % Check if the contact points are close to thorax elipsoid
-        [is_scap_close,~] = is_close_to_thorax(trajectory_noised,OS_model,0.3,0.5,0,0.1);
+        [is_scap_close,~] = is_close_to_thorax(trajectory_noised,OS_model,0.3*1.5,0.8*1.5,0,0.1);
         if  is_scap_close == 0
             continue
         end
@@ -41,16 +71,58 @@ for i=1:numdata_training
         
         for ival = 1:length(clavicle_xrot_vals)
         trajectory_rotclav = change_clavx(trajectory_noised,clavicle_xrot_vals(ival));
+
+        qSC = eul2quat(trajectory_rotclav(1:3),'YZX');
+        qAC = eul2quat(trajectory_rotclav(4:6),'YZX');
+        qGH =eul2quat(trajectory_rotclav(7:9),'YZY');
+        q_ulna = trajectory_rotclav(10);
+
+        if qSC(1) < 0.8
+            continue
+        end
+
+        if qAC(1) < 0.8
+            continue
+        end
+
+        if qGH(1) < 0.5
+            continue
+        end
+
+        if q_ulna < 0.01 && q_ulna < 2
+            continue
+        end
+
         trajectory_training_full = [trajectory_training_full; trajectory_rotclav]; 
         end
     end
-
+    end
+    i
+    size(trajectory_training_full,1)
 end
 
 time_training_full = linspace(0,1,size(trajectory_training_full,1));
 % data2mot(trajectory_training_full,time_training_full,[motion_name,'_training.mot'],'euler', 'struct');
 
 end
+
+function res = calculate_GH_local(R_scap_global,R_hum_global,x0)
+    
+    fun = @(x) sum((R_scap_global * R_y(x(1)) * R_z(x(2)) * R_y(x(3)) - R_hum_global).^2,"all");
+    % x0 = [mot_eul(i,4:6)];
+    A = [];
+    b = [];
+    Aeq = [];
+    beq = [];
+    options = optimoptions('fsolve','Display','none','algorithm','levenberg-marquardt');
+    % res = fmincon(fun,x0,A,b,Aeq,beq);
+    res = fsolve(fun,x0,options);
+end
+
+function res = R_hum_glob(traj)
+    res = R_y(traj(1)) * R_z(traj(2)) * R_x(traj(3)) * R_y(traj(4)) * R_z(traj(5)) * R_x(traj(6)) * R_y(traj(7)) * R_z(traj(8)) * R_y(traj(9));
+end
+
 
 function [res,Eeq1,Eeq2] = is_close_to_thorax(q,OS_model,TSmean,TSrange,AImean,AIrange)
     [pos_TS,pos_AI] = contact_points_position(q,OS_model);

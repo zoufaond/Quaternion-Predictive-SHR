@@ -458,7 +458,7 @@ model.nMus = counter;
 
 if nargin>1
 
-for EULorQ = 1:2
+for EULorQ = 2:2
 if EULorQ == 1
     current_poly = 'Euler';
 elseif EULorQ == 2

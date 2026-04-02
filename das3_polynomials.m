@@ -43,8 +43,10 @@ angles = deg2rad(data_motion(:,2:end));
 
 %% for each muscle...
 if strcmp(gen_polyvalues,'gen_polyvalues')
-    % for imus = 1:length(model.muscles)
-    for imus = 60:62
+    first_muscles = [25:35];
+    customorder = [first_muscles, setdiff(1:length(model.muscles), first_muscles)];
+    for imus = customorder
+    % for imus = 60:62
         mus = model.muscles{imus};
     
         alljntsQ = [];
@@ -69,35 +71,34 @@ if strcmp(gen_polyvalues,'gen_polyvalues')
     
         alljntsQ = [alljntsQ alljnts(:,end-1:end)]; % add revolute joints
         alljntsQA = [alljntsQA alljnts(:,end-1:end)]; % add revolute joints
-        try
-            % instead of moment arms directly from Opensim, calculate them using -dL/dq
-            % if the muscle crosses GH, also get the lines of action
-            if any(strcmp('GHy',mus.dof_names))
-                [alllengths, allmomarms,quat_J, allGHfvecs] = opensim_get_polyvalues(Mod, alljnts, alljntsQ, mus.name, imus, mus.dof_indeces, GH_seq, SimEn, groundbody, scapulabody);
-                save([motion_path,'\',mydir '\path_' mus.name],'alljnts','alllengths','alljntsQ','alljntsQA','allmomarms','quat_J');        
-                save([motion_path,'\',mydir '\GHfvec_' mus.name],'alljnts','allGHfvecs','alljntsQ','alljntsQA');        
-                disp([mus.name, ' lengths, moment arms and GH force vectors saved.']);
-            else
-                % [alllengths, allmomarms, quat_J] = opensim_get_polyvalues(Mod, alljnts, alljntsQ, mus.name, imus, mus.dof_indeces, GH_seq);
-                % save([motion_path,'\',mydir '\path_' mus.name],'alljnts','alllengths','alljntsQ','alljntsQA','allmomarms','quat_J');        
-                % disp([mus.name, ' lengths and moment arms saved.']);
-                continue
-            end
+        % instead of moment arms directly from Opensim, calculate them using -dL/dq
+        % if the muscle crosses GH, also get the lines of action
+        if any(strcmp('GHy',mus.dof_names))
+            [alllengths, allmomarms,quat_J, allGHfvecs] = opensim_get_polyvalues(Mod, alljnts, alljntsQ, mus.name, imus, mus.dof_indeces, GH_seq, SimEn, groundbody, scapulabody);
+            save([motion_path,'\',mydir '\path_' mus.name],'alljnts','alllengths','alljntsQ','alljntsQA','allmomarms','quat_J');        
+            save([motion_path,'\',mydir '\GHfvec_' mus.name],'alljnts','allGHfvecs','alljntsQ','alljntsQA');        
+            disp([mus.name, ' lengths, moment arms and GH force vectors saved.']);
+        else
+            [alllengths, allmomarms, quat_J] = opensim_get_polyvalues(Mod, alljnts, alljntsQ, mus.name, imus, mus.dof_indeces, GH_seq);
+            save([motion_path,'\',mydir '\path_' mus.name],'alljnts','alllengths','alljntsQ','alljntsQA','allmomarms','quat_J');        
+            disp([mus.name, ' lengths and moment arms saved.']);
+            % continue
+        end
     
             % make_mot_file([motion_path,'\',mydir '\angles_' mus.name '.mot'],alljnts,dof_names);
             % disp(['Opensim motion file for muscle ', mus.name, ' created.']);
     
     
-        catch err
-            disp(err);
-            return;
-        end
+        % catch err
+        %     disp(err);
+        %     return;
+        % end
     
         clear mus alljnts alllengths allmomarms jnt_values all_dof_names
     end
 end
 %% generate polynomial approximations of lengths
-if nargin>5, musclepath_poly(muscles,mydir,motion_path,musclepolyfile); end
+% if nargin>5, musclepath_poly(muscles,mydir,motion_path,musclepolyfile); end
 
 %% generate polynomial approximations of GH lines of action
 % if nargin>5, GH_poly(muscles,mydir,musclepolyfile); end
@@ -431,8 +432,8 @@ if exist(matfilename,'file')
 end
 
 %% main loop for each muscle element
-% for imus = 1:length(muscles)
-for imus = 60:62
+for imus = 1:length(muscles)
+% for imus = 60:62
     
     % get moment arms and lengths out of the .mat files
     musfilename = [motion_path,'\',mydir,'\path_',muscles{imus}.name,'.mat'];
@@ -440,7 +441,7 @@ for imus = 60:62
         
     mus = muscles{1,imus};
     ndofs = length(mus.dof_indeces); % number of dofs spanned by this muscle
-    order = 4; % polynomial order
+    order = 3; % polynomial order
 
     if EULorQ == 1
         jnts = ma.alljnts;
@@ -787,7 +788,7 @@ for imus = 1:length(muscles)
         
     mus = muscles{1,imus};
     ndofs = length(mus.dof_indeces); % number of dofs spanned by this muscle
-    order = 4; % polynomial order
+    order = 3; % polynomial order
         
     num_data = size(ma.alljnts,1);
     
@@ -873,7 +874,7 @@ for imus = 1:length(muscles)
             % now determine which expanded model had the lowest RMS
             [RMSmin, col] = min(RMSnew);
             % if the change in error is less than 5%, stop without adding this term 
-            if ((ii>1)&&((RMS - RMSmin)/RMS<0.045))
+            if ((ii>1)&&((RMS - RMSmin)/RMS<0.015))
                 fprintf('Change in error: %3f. No more terms added.\n ',(RMS - RMSmin)/RMS);
                 fprintf(logfile,'Change in error: %3f. No more terms added.\n ',(RMS - RMSmin)/RMS);
                 break;

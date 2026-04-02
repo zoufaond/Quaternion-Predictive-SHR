@@ -9,7 +9,8 @@ names = ["res_quat_Elevation.mat","res_quat_Scabduction","res_quat_Flexion.mat"]
 
 
 traj_all_eul = [];
-scalings = [0.1,0.1,0.2];
+scalings = [0.3,0.3,0.3];
+timestep = 0.04;
 
 for i=1:3
     mot_struct = load(names(i));
@@ -17,7 +18,7 @@ for i=1:3
     eul_traj = quat2eul_motion(traj_quat,'YZY');
     eul_traj(:,8) = scale_dof(eul_traj(:,8),scalings(i));
     if i < 3
-        traj_all_eul = [traj_all_eul; eul_traj; zeros(20,10)];
+        traj_all_eul = [traj_all_eul; eul_traj; zeros(40,10)];
     else
         traj_all_eul = [traj_all_eul; eul_traj];
     end
@@ -47,4 +48,4 @@ mot_struct.euler = traj_all_interp;
 mot_struct.quat = kinematics;
 mot_struct.time = time';
 % % 
-save('Elevation_prediction.mat','mot_struct');
+save('All_motions.mat','mot_struct');
