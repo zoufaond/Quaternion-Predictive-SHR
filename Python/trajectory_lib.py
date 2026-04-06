@@ -31,23 +31,20 @@ def initial_guess_from_solution(solution_file,num_free):
 
     return initial_guess
 
-def exp_emg(emg_struct_name,num_nodes,EMG_num):
+def exp_emg(emg_struct_name,num_nodes, emg_names):
     emg_struct = sc.io.loadmat(emg_struct_name)
-    data = emg_struct['data']['num_'+str(EMG_num)]
-    emg_names = ('AnteriorDelt','IntermediateDelt','PosteriorDelt','Infrasp','Suprasp','MiddleTrap','UpperTrap','Serrupper')
+    data = emg_struct['data']['num_'+str(1)]
     time = np.linspace(0,1,len(data[0,0][emg_names[0]].item()[0]))
     time_new = np.linspace(0,1,num_nodes)
     emg_exp = np.zeros([len(emg_names),num_nodes])
-    valid_mask = ~np.isnan(data[0,0][emg_names[0]].item()[0])
-    cs_mask = sc.interpolate.CubicSpline(time, valid_mask.astype(float))
-    indexes = (cs_mask(time_new) > 0.5).astype(int)
 
     for i in range(len(emg_names)):
-        signal = data[0,0][emg_names[i]].item()[0].copy()
-        signal[~valid_mask] = 0.0
-        cs = sc.interpolate.CubicSpline(time, signal)
+        data_interp = data[0,0][emg_names[i]].item()[0]
+        data_interp = np.nan_to_num(data_interp, nan=0.0)
+        cs = sc.interpolate.CubicSpline(time,data_interp)
         emg_exp[i,:] = cs(time_new)
 
+    indexes = (emg_exp[0,:]>1e-4)*1
     return emg_exp, indexes
 
 def exp_trajectory_quat(mot_struct_name,interval_value):

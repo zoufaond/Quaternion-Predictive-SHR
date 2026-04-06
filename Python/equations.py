@@ -7,18 +7,14 @@ import pickle
 
 def objective_state_diff(num_nodes,interval_value):
     
-    """Build objective and Jacobian terms that penalize state-to-state rate changes.
-
-    This adds a smoothness cost by summing squared differences between
-    consecutive state nodes, scaled by the time interval.
-    """
+    """Build objective and Jacobian terms that penalize state rate of change squared."""
 
     node_val = sp.Matrix(sp.symbols('state_0:' + str(num_nodes)))
     obj_list = []
 
     for i in range(num_nodes-1):
-        act_diff = node_val[i+1] - node_val[i]
-        obj_list.append((act_diff**2) / interval_value)
+        state_diff = node_val[i+1] - node_val[i]
+        obj_list.append((state_diff**2) / interval_value)
 
     obj = sum(obj_list)
     obj_jac = sp.Matrix([obj]).jacobian(node_val)
@@ -26,18 +22,19 @@ def objective_state_diff(num_nodes,interval_value):
     # Lambda functions for numerical evaluation
     obj_np = sp.lambdify([node_val],obj)
     obj_jac_np = sp.lambdify([node_val],obj_jac)
+
     
     return obj_np,obj_jac_np
 
 
 
-def max_GH_stab(tilt_y,tilt_z,interval_value):
+def objective_max_GH_stab(tilt_y,tilt_z,interval_value):
 
     """Create objective and Jacobian functions for GH joint stability.
 
     The reaction force vector is rotated into the GH frame using the provided
-    tilt angles (degrees). The objective penalizes shear-force components
-    relative to the compressive component and is scaled by interval_value.
+    version and inclination angles (degrees). The objective penalizes shear-force components
+    relative to the compressive component.
     """
 
     reactions = sp.symbols('rx ry rz')
@@ -57,16 +54,16 @@ def max_GH_stab(tilt_y,tilt_z,interval_value):
 
 
 
-def optimize_parameters(num_params,mus_group,optimize,w_fmax,w_lceopt):
+def objective_scalers_restriction(mus_group,w_fmax,w_lceopt):
 
-    """Create objective and Jacobian functions for muscle parameter optimization.
+    """Create objective and Jacobian functions for muscle scalers restriction.
     
     Extracts muscle group names from mus_group and creates symbolic variables for
     fmax and lceopt scalers. The objective penalizes deviations of each scaler from 1
     using weighted squared-error terms (1-scaler)^2.
     
-    Args:
-        num_params: Number of parameters (unused in current implementation).
+    Parameters:
+    -----------
         mus_group: List of muscle groups; each group name is extracted from index [0][0:-1].
         optimize: Optimization flag (unused in current implementation).
         w_fmax: Weight for fmax scaler objective term.
@@ -78,21 +75,21 @@ def optimize_parameters(num_params,mus_group,optimize,w_fmax,w_lceopt):
     """
     
     mus_dict = {}
-    full_obj = 0
+    obj = 0
 
     # Create fmax_scaler symbolic variables for each muscle group and add penalty term.
     for igroup in range(len(mus_group)):
         current_group = mus_group[igroup][0][0:-1]
         fmax_scaler = sp.Symbol('fmax_scaler_' + current_group)
         mus_dict.update({'fmax_scaler_' + current_group: fmax_scaler})
-        full_obj += w_fmax * ((1-fmax_scaler)**2)
+        obj += w_fmax * ((1-fmax_scaler)**2)
 
     # Create lceopt_scaler symbolic variables for each muscle group and add penalty term.
     for igroup in range(len(mus_group)):
         current_group = mus_group[igroup][0][0:-1]
         lceopt_scaler = sp.Symbol('lceopt_scaler_' + current_group)
         mus_dict.update({'lceopt_scaler_' + current_group: lceopt_scaler})
-        full_obj += w_lceopt * (1-lceopt_scaler)**2
+        obj += w_lceopt * (1-lceopt_scaler)**2
 
     # Sort parameters alphabetically and extract as list for consistent ordering.
     myKeys = list(mus_dict.keys())
@@ -100,14 +97,14 @@ def optimize_parameters(num_params,mus_group,optimize,w_fmax,w_lceopt):
     sorted = {i: mus_dict[i] for i in myKeys}
     sorted_params = [*sorted.values()]
 
-    obj_jac = sp.Matrix([full_obj]).jacobian(sorted_params)
-    obj_np = sp.lambdify(sorted_params,full_obj)
+    obj_jac = sp.Matrix([obj]).jacobian(sorted_params)
+    obj_np = sp.lambdify(sorted_params,obj)
     obj_jac_np = sp.lambdify(sorted_params,obj_jac)
 
     return obj_np, obj_jac_np
 
 
-def min_activation(acts,interval_value,include_EMG = False):
+def objective_min_activation(acts,interval_value,include_EMG = False, muscles_emg_tracked = []):
     """
     Objective function for activation minimization with optional EMG-based constraints.
     
@@ -135,14 +132,13 @@ def min_activation(acts,interval_value,include_EMG = False):
     """
     
     a_str = sorted([str(acts[x]).replace('(t)','') for x in range(len(acts))])
-    muscles_emg_optim = [['act_47','act_48'],['act_43','act_44','act_45','act_46'],['act_38','act_39','act_40'],['act_56','act_57','act_58'],['act_1','act_2'],['act_6','act_7','act_8'],['act_12'],['act_26','act_27','act_28']]
-    a_emg = sp.symbols(f'a_emg1:{len(muscles_emg_optim)+1}')
+    a_emg = sp.symbols(f'a_emg1:{len(muscles_emg_tracked)+1}')
     weight_index = sp.Symbol('weight_index')
     w_min_squared = sp.Symbol('w_min_squared')
     w_min_emg = sp.Symbol('w_min_emg')
     obj_emg = 0
     a = sp.symbols(a_str)
-    for j,imus in enumerate(muscles_emg_optim):
+    for j,imus in enumerate(muscles_emg_tracked):
         mus_indeces = [a_str.index(mus) for mus in imus]
         mus_current = 0
         for i in range(len(mus_indeces)):
@@ -167,11 +163,12 @@ def min_activation(acts,interval_value,include_EMG = False):
 
 
 
-def custom_objective_quat(num_coords,interval_value, clav_pos,include_quat_norm = False):
+def objective_traj_quat(num_coords,interval_value, clav_pos,include_quat_norm = False):
     """
-    Constructs a quaternion-based objective function and its Jacobian for shoulder joint optimization.
+    Constructs a quaternion-based objective function for trajectory tracking and its Jacobian.
     
-    Args:
+    Parameters:
+    -----------
         num_coords: Number of coordinate variables (13 for full shoulder model)
         interval_value: Scaling factor for objective function terms
         clav_pos: Position along clavicle x-axis for AC joint position calculation
@@ -245,7 +242,7 @@ def custom_objective_quat(num_coords,interval_value, clav_pos,include_quat_norm 
 
     return obj_np,obj_jac_np, obj_SC_np, obj_jac_SC_np
 
-def custom_objective_eul(num_coords,interval_value,GH_seq = 'YZY'):
+def objective_traj_eul(num_coords,interval_value,GH_seq = 'YZY'):
     x = sp.symbols(f'x1:{num_coords+1}')
     x_traj = sp.symbols(f'x_traj1:{num_coords+1}')
 
@@ -289,7 +286,305 @@ def custom_objective_eul(num_coords,interval_value,GH_seq = 'YZY'):
 
     return obj_np,obj_jac_np, obj_SC_np, obj_jac_SC_np
 
+
+def polynomials_quat(model_struct,q,u,derive,RC_lim, calibrated_params = None):
+    """
+    Calculates muscle-tendon forces, moment arms, and torques for a shoulder musculoskeletal model using quaternion-based kinematics and polynomial approximations for wrapped muscles.
+    Parameters
+    ----------
+    model_struct : Matlab Structure containing shoulder model data with nested dictionaries for muscles, conoid ligament properties, and kinematic frames.
+    q : List of generalized coordinates representing joint positions (excluding thorax quaternion and radius).
+    u : List of generalized velocities.
+    derive : Derivation method, either 'symbolic' or 'numeric'. 'Numeric' uses the values instead of symbols and is quicker.
+    RC_lim : Rotator cuff muscle force limiter, scaling factor applied to rotator cuff muscles (supra, infra).
+    calibrated_params : Parameter calibration mode. If None, uses default muscle parameters. If 'calibrate_params', enables parameter optimization with scalers. If dict, applies pre-calibrated parameters from previous optimization. Default is None.
+    
+    Returns
+    -------
+    TE_subs : Generalized torques/forces (10x1) excluding pronation/supination.
+    act :  List of muscle activation symbols as dynamic symbols.
+    TE_conoid : Torque contributions from conoid ligament (10x1).
+    fmax_init :  Initial values for maximum muscle force scalers (optimization parameters).
+    fmax_range : dict
+        Parameter ranges for maximum muscle force scalers.
+    lceopt_init : dict
+        Initial values for optimal muscle length scalers (optimization parameters).
+    lceopt_range : dict
+        Parameter ranges for optimal muscle length scalers.
+    mus_groups : list of lists
+        Grouped muscle names by optimization category.
+    GH_mus_forces_subbed : sympy.Matrix or numpy.ndarray
+        Glenohumeral joint reaction forces (3x1: x, y, z components).
+    mus_forces_objective_subs : sympy.Matrix or numpy.ndarray
+        Individual muscle forces formatted for optimization objectives.
+    """
+
+    
+    q_thorax0 = me.dynamicsymbols('q_thorax0')
+    q_thorax1 = me.dynamicsymbols('q_thorax1')
+    q_thorax2 = me.dynamicsymbols('q_thorax2')
+    q_thorax3 = me.dynamicsymbols('q_thorax3')
+    q_radius = (me.dynamicsymbols('q_radius'))
+
+    q_new = q.copy()
+    q_new.append(q_radius)
+    q_new.insert(0,q_thorax3)
+    q_new.insert(0,q_thorax2)
+    q_new.insert(0,q_thorax1)
+    q_new.insert(0,q_thorax0)
+
+    qpol = q_new[1:4]+q_new[5:8]+q_new[9:12]+q_new[13:16]+q_new[16:18] #exclude q0 from quaternions
+    nmus = len(model_struct['model']['muscles'][0,0][0])
+
+    dquatdSC = dquatdt(q_new[4:8],u[0:3])
+    dquatdAC = dquatdt(q_new[8:12],u[3:6])
+    dquatdGH = dquatdt(q_new[12:16],u[6:9])
+    dqdtEL = u[9]
+    
+    actSym = sp.symbols('actSym_1:' + str(nmus + 1))
+    
+    if derive == 'symbolic':
+        fmax = sp.symbols('fmax_1:' + str(nmus + 1))
+        lceopt = sp.symbols('lceopt_1:' + str(nmus + 1))
+        lslack = sp.symbols('lslack_1:' + str(nmus + 1))
+        muscle_constants = {'fmax': fmax,
+                           'lceopt': lceopt,
+                           'lslack': lslack}
+    elif derive == 'numeric':
+        fmax = []
+        fmax_init = {}
+        fmax_range = {}
+        lceopt = []
+        lceopt_init = {}
+        lceopt_range = {}
+        lslack = []
+        vmax = []
+        # these muscle groups will be calibrated, deltscap group will be calibrated by fmax_scaler and lceopt_scaler etc.
+        calibrated_muscles = ['deltscap','deltclav','trapscap','trapclav','serr','infra']
+        mus_groups = [[] for _ in range(len(calibrated_muscles))]
+        muscle_constants = {}
+        fmax_scaler_one = sp.Symbol('fmax_scaler')
+        fmax_scaler_group = [sp.Symbol('fmax_scaler_' + i) for i in calibrated_muscles]
+        lceopt_scaler_group = [sp.Symbol('lceopt_scaler_' + i) for i in calibrated_muscles]
+        
+        for i in range(nmus):
+            muscle = model_struct['model']['muscles'].item()[0,i]
+            
+            
+            lslack.append(muscle['lslack'][0,0].item())
+            vmax.append(muscle['vmax'][0,0].item())
+            mus_name = muscle['name'][0,0].item()
+
+            if calibrated_params == None:
+                fmax.append(muscle['fmax'][0,0].item())
+                lceopt.append(muscle['lceopt'][0,0].item())
+
+            elif calibrated_params == 'calibrate_params':
+                if 'deltscap' in mus_name or 'deltclav' in mus_name or 'trapscap' in mus_name or 'trapclav' in mus_name or 'serr' in mus_name or 'infra' in mus_name:
+                    mus_index = next((i for i, item in enumerate(calibrated_muscles) if mus_name.startswith(item)), None)
+                    mus_groups[mus_index].append(mus_name)
+                    fmax_current = muscle['fmax'][0,0].item()
+                    fmax_scaler = fmax_scaler_group[mus_index]
+                    fmax.append(fmax_scaler*fmax_current)
+                    fmax_init.update({'fmax_scaler_' + calibrated_muscles[mus_index]: 1})
+                    fmax_range.update({fmax_scaler: (0.5, 1.5)})
+
+                    lceopt_scaler = lceopt_scaler_group[mus_index]
+                    lceopt.append(lceopt_scaler*muscle['lceopt'][0,0].item())
+                    lceopt_init.update({'lceopt_scaler_' + calibrated_muscles[mus_index]: 1})
+                    lceopt_range.update({lceopt_scaler: (0.7, 1.3)})
+                else:
+                    fmax.append(muscle['fmax'][0,0].item())
+                    lceopt.append(muscle['lceopt'][0,0].item())
+
+            else:
+                try:
+                    mus_index = next((i for i, item in enumerate(calibrated_muscles) if mus_name.startswith(item)), None)
+                    mus_groups[mus_index].append(mus_name)
+                    fmax.append(calibrated_params['calibrated_params']['fmax_scaler_' + calibrated_muscles[mus_index]].item()[0][0] * muscle['fmax'][0,0].item())
+                    lceopt.append(calibrated_params['calibrated_params']['lceopt_scaler_' + calibrated_muscles[mus_index]].item()[0][0] * muscle['lceopt'][0,0].item())
+                except:
+                    fmax.append(muscle['fmax'][0,0].item())
+                    lceopt.append(muscle['lceopt'][0,0].item())
+
+            if 'supra' in mus_name or 'infra' in mus_name:
+                fmax[i] = fmax[i] * RC_lim
+                    
+    mus_lengths_full = sp.zeros(nmus,1)
+    mus_forces = sp.zeros(nmus,1)
+    JacInSpat_full = sp.zeros(11,nmus)
+    xforce = 0
+    yforce = 0
+    zforce = 0
+    
+    for imus in range(nmus):
+        muscle = model_struct['model']['muscles'].item()[0,imus]
+        isWrapped = muscle['isWrapped'].item()
+        mus_name = muscle['name'][0,0].item()
+
+        if isWrapped == 0:
+            # if not wrapped, calculate length and moment arms analytically
+            # This is based on section 3.2 in Zoufaly et al., 2025
+            origin = muscle['origin_frame'].item()
+            insertion = muscle['insertion_frame'].item()
+            O_pos = muscle['origin_position'].item()[0]
+            I_pos = muscle['insertion_position'].item()[0]
+            # Calculate muscle length using analytical function for quaternion representation
+            L = analytic_length_quat(origin, insertion, O_pos, I_pos, q_new[4:], model_struct)
+            # Calculate Jacobian of muscle length and velocity of muscle length)
+            Jac = -sp.Matrix([L]).jacobian(q_new).T
+            vce = -sp.Matrix(Jac[4:-1]).T * sp.Matrix([dquatdSC,dquatdAC,dquatdGH,dqdtEL])
+
+            # Map the jacobian from the quaternion representation to spatial coordinates using the G matrix for each joint segment            
+            TEsc = 1/2 * G(q_new[4:8])*sp.Matrix(Jac[4:8])
+            TEac = 1/2 * G(q_new[8:12])*sp.Matrix(Jac[8:12])
+            TEgh = 1/2 * G(q_new[12:16])*sp.Matrix(Jac[12:16])
+            TEel =  sp.Matrix(Jac[16:18])
+            
+            iJacInSpat = sp.Matrix(TEsc).col_join(TEac).col_join(TEgh).col_join(TEel)
+            JacInSpat_full[:,imus] = iJacInSpat
+
+            # print('analytic')
+            
+        elif isWrapped == 1:
+            
+            # If muscle is wrapped, calculate the polynomial approximaiton of the muscle-tendon path
+            # The mapping used here is based on section 3.3 in Zoufaly et al., 2025.
+            name = muscle['name'].item()
+            npolterms = muscle['Quaternion'][0,0]['lparam_count'].item()
+            polcoeff_np = muscle['Quaternion'][0,0]['lcoefs'].item()
+            polcoeff = sp.Matrix(polcoeff_np)
+            expon_np = muscle['Quaternion'][0,0]['lparams'].item()
+            expon = sp.Matrix(expon_np)
+            musdof = muscle['dof_indeces'].item()
+            nmusdof = muscle['dof_count'].item()
+            L = 0
+            
+
+            for i in range(npolterms.item()):
+             # Add this term's contribution to the muscle length
+                term = polcoeff[i]
+                for j in range(nmusdof.item()):
+                    mdof = musdof[j]
+                    for k in range(expon_np[i,j].item()):
+                        term = term * qpol[int(mdof-1)]
+
+                L = L + term
+            jac = -sp.Matrix([L]).jacobian(qpol).T
+            vce = -sp.Matrix(jac[3:-1]).T * sp.Matrix([sp.Matrix(dquatdSC[1:4]),sp.Matrix(dquatdAC[1:4]),sp.Matrix(dquatdGH[1:4]),dqdtEL])
+
+            # inEtrans introduced in eq. 20 in Zoufaly et al., 2025
+            TEsc = invEtrans(q_new[4:8])*sp.Matrix(jac[3:6])
+            TEac = invEtrans(q_new[8:12])*sp.Matrix(jac[6:9])
+            TEgh = invEtrans(q_new[12:16])*sp.Matrix(jac[9:12])
+            TEel = sp.Matrix(jac[12:14])
+            iJacInSpat = sp.Matrix(TEsc).col_join(TEac).col_join(TEgh).col_join(TEel)
+            JacInSpat_full[:,imus] = iJacInSpat
+            # print('poly')
+            
+        mus_lengths_full[imus] = L
+        mus_forces[imus] = muscle_force(actSym[imus],L,vce,fmax[imus],lceopt[imus],lslack[imus],vmax[imus])
+
+        # Not all OS_model.m files include polynomial coefficients for GH force vectors (only OS_model_prediction for par2 does).
+        try:
+            xparam_count = muscle['xparam_count'].item()
+            xparams = muscle['xparams'].item()
+            xcoefs = muscle['xcoefs'].item()
+            yparam_count = muscle['yparam_count'].item()
+            yparams = muscle['yparams'].item()
+            ycoefs = muscle['ycoefs'].item()
+            zparam_count = muscle['zparam_count'].item()
+            zparams = muscle['zparams'].item()
+            zcoefs = muscle['zcoefs'].item()
+            xvec = 0
+            yvec = 0
+            zvec = 0
+            
+
+            for i in range(xparam_count.item()):
+             # Add this term's contribution to the muscle length
+                term = xcoefs[i]
+                for j in range(nmusdof.item()):
+                    mdof = musdof[j];
+                    for k in range(xparams[i,j].item()):
+                        term = term * qpol[int(mdof-1)];
+
+                xvec = xvec + term
+    
+            for i in range(yparam_count.item()):
+             # Add this term's contribution to the muscle length
+                term = ycoefs[i]
+                for j in range(nmusdof.item()):
+                    mdof = musdof[j];
+                    for k in range(yparams[i,j].item()):
+                        term = term * qpol[int(mdof-1)];
+
+                yvec = yvec + term
+    
+            for i in range(zparam_count.item()):
+             # Add this term's contribution to the muscle length
+                term = zcoefs[i]
+                for j in range(nmusdof.item()):
+                    mdof = musdof[j];
+                    for k in range(zparams[i,j].item()):
+                        term = term * qpol[int(mdof-1)]
+
+                zvec = zvec + term
+            
+            xforce += xvec * mus_forces[imus]
+            yforce += yvec * mus_forces[imus]
+            zforce += zvec * mus_forces[imus]
+
+        except:
+            pass
+            
+    # Calculate full torque from muscle forces
+    FQ = JacInSpat_full * mus_forces
+    # Exclude the pronation and supination row and set pronation to 120 degrees.
+    TE = sp.Matrix(FQ[:-1])
+    TE = TE.subs(q_new[17],120*np.pi/180)
+    JacInSpat = JacInSpat_full.subs(q_new[17],120*np.pi/180)
+    mus_lengths = mus_lengths_full.subs(q_new[17],120*np.pi/180)
+    mus_forces = mus_forces.subs(q_new[17],120*np.pi/180)
+
+    GH_mus_forces = sp.Matrix([xforce, yforce, zforce])
+    GH_mus_forces = GH_mus_forces.subs(q_new[17],120*np.pi/180)
+    
+    
+    symbols_list = TE.free_symbols
+    t = sp.Symbol('t')
+    actSym_list = [i for i in symbols_list if str(i).startswith('actSym')]
+    
+    act = []
+    for i in actSym_list:
+        act.append(me.dynamicsymbols(str(i).replace('Sym','')))
+
+    act_subs = dict(zip(actSym_list,act))
+    TE_subs = me.msubs(TE, act_subs)
+    GH_mus_forces_subbed = me.msubs(GH_mus_forces, act_subs)
+
+    # Conoid ligament moment arms are calculated the same way as non-wrapped muscles
+    conoid_lopt = model_struct['model']['conoid_length'].item()[0][0]
+    conoid_k = model_struct['model']['conoid_stiffness'].item()[0][0]
+    conoid_eps = model_struct['model']['conoid_eps'].item()[0][0]
+    conoid_origin = model_struct['model']['conoid_origin'].item()[0]
+    conoid_insertion = model_struct['model']['conoid_insertion'].item()[0]
+    conoid_length = analytic_length_quat('clavicle_r','scapula_r', conoid_origin, conoid_insertion, q_new[4:], model_struct)
+    F_conoid = conoid_force(conoid_length, conoid_lopt, conoid_k, conoid_eps)
+    Jac_conoid = -sp.Matrix([conoid_length]).jacobian(q_new).T                
+    TEsc_conoid = 1/2 * G(q_new[4:8])*sp.Matrix(Jac_conoid[4:8])
+    TEac_conoid = 1/2 * G(q_new[8:12])*sp.Matrix(Jac_conoid[8:12])
+    TEgh_conoid = 1/2 * G(q_new[12:16])*sp.Matrix(Jac_conoid[12:16])
+    TEel_conoid = 1/2 * sp.Matrix(Jac_conoid[16:18])
+    JacInSpat_conoid = sp.Matrix(TEsc_conoid).col_join(TEac_conoid).col_join(TEgh_conoid).col_join(TEel_conoid)
+    TE_conoid = F_conoid * JacInSpat_conoid
+    
+    return TE_subs, act, TE_conoid[:-1], fmax_init, fmax_range, lceopt_init, lceopt_range, mus_groups, GH_mus_forces_subbed
+
+
 def polynomials_euler(model_struct,q,u,derive, motion_folder = None, gen_matlab_functions = None):
+
+    # Polynomials for Euler angle version of the model is applied with the same logic as the quaternion version.
 
     q_thorax1 = me.dynamicsymbols('q_thorax1')
     q_thorax2 = me.dynamicsymbols('q_thorax2')
@@ -348,7 +643,6 @@ def polynomials_euler(model_struct,q,u,derive, motion_folder = None, gen_matlab_
             L = analytic_length_eul(origin, insertion, O_pos, I_pos, qpol[3:], model_struct)
             jacobian_full[:,imus] = -sp.Matrix([L]).jacobian(qpol[3:]).T
             vce = -jacobian_full[:-1,imus].T * sp.Matrix(u)
-            
         
         elif isWrapped == 1:
             
@@ -409,274 +703,7 @@ def polynomials_euler(model_struct,q,u,derive, motion_folder = None, gen_matlab_
     
     return TE_act_subbed, act, TE_conoid[:-1]
 
-
-def polynomials_quat(model_struct,q,u,derive,RC_lim, calibrated_params = None, gen_matlab_functions = None):
-    
-    q_thorax0 = me.dynamicsymbols('q_thorax0')
-    q_thorax1 = me.dynamicsymbols('q_thorax1')
-    q_thorax2 = me.dynamicsymbols('q_thorax2')
-    q_thorax3 = me.dynamicsymbols('q_thorax3')
-    q_radius = (me.dynamicsymbols('q_radius'))
-
-    q_new = q.copy()
-    q_new.append(q_radius)
-    q_new.insert(0,q_thorax3)
-    q_new.insert(0,q_thorax2)
-    q_new.insert(0,q_thorax1)
-    q_new.insert(0,q_thorax0)
-
-    qpol = q_new[1:4]+q_new[5:8]+q_new[9:12]+q_new[13:16]+q_new[16:18] #exclude q0 from quaternions
-    nmus = len(model_struct['model']['muscles'][0,0][0])
-
-    dquatdSC = dquatdt(q_new[4:8],u[0:3])
-    dquatdAC = dquatdt(q_new[8:12],u[3:6])
-    dquatdGH = dquatdt(q_new[12:16],u[6:9])
-    dqdtEL = u[9]
-    
-    actSym = sp.symbols('actSym_1:' + str(nmus + 1))
-    
-    if derive == 'symbolic':
-        fmax = sp.symbols('fmax_1:' + str(nmus + 1))
-        lceopt = sp.symbols('lceopt_1:' + str(nmus + 1))
-        lslack = sp.symbols('lslack_1:' + str(nmus + 1))
-        muscle_constants = {'fmax': fmax,
-                           'lceopt': lceopt,
-                           'lslack': lslack}
-    elif derive == 'numeric':
-        fmax = []
-        fmax_init = {}
-        fmax_range = {}
-        lceopt = []
-        lceopt_init = {}
-        lceopt_range = {}
-        lslack = []
-        vmax = []
-        optimized_muscles = ['deltscap','deltclav','trapscap','trapclav','serr','infra']
-        mus_groups = [[] for _ in range(len(optimized_muscles))]
-        muscle_constants = {}
-        fmax_scaler_one = sp.Symbol('fmax_scaler')
-        fmax_scaler_group = [sp.Symbol('fmax_scaler_' + i) for i in optimized_muscles]
-        lceopt_scaler_group = [sp.Symbol('lceopt_scaler_' + i) for i in optimized_muscles]
-        
-        for i in range(nmus):
-            muscle = model_struct['model']['muscles'].item()[0,i]
-            
-            
-            lslack.append(muscle['lslack'][0,0].item())
-            vmax.append(muscle['vmax'][0,0].item())
-            mus_name = muscle['name'][0,0].item()
-
-            if calibrated_params == None:
-                fmax.append(muscle['fmax'][0,0].item())
-                lceopt.append(muscle['lceopt'][0,0].item())
-
-            elif calibrated_params == 'calibrate_params':
-                if 'deltscap' in mus_name or 'deltclav' in mus_name or 'trapscap' in mus_name or 'trapclav' in mus_name or 'serr' in mus_name or 'infra' in mus_name:
-                    mus_index = next((i for i, item in enumerate(optimized_muscles) if mus_name.startswith(item)), None)
-                    mus_groups[mus_index].append(mus_name)
-                    fmax_current = muscle['fmax'][0,0].item()
-                    fmax_scaler = fmax_scaler_group[mus_index]
-                    fmax.append(fmax_scaler*fmax_current)
-                    fmax_init.update({'fmax_scaler_' + optimized_muscles[mus_index]: 1})
-                    fmax_range.update({fmax_scaler: (0.5, 1.5)})
-
-                    lceopt_scaler = lceopt_scaler_group[mus_index]
-                    lceopt.append(lceopt_scaler*muscle['lceopt'][0,0].item())
-                    lceopt_init.update({'lceopt_scaler_' + optimized_muscles[mus_index]: 1})
-                    lceopt_range.update({lceopt_scaler: (0.7, 1.3)})
-                else:
-                    fmax.append(muscle['fmax'][0,0].item())
-                    lceopt.append(muscle['lceopt'][0,0].item())
-
-            else:
-                try:
-                    mus_index = next((i for i, item in enumerate(optimized_muscles) if mus_name.startswith(item)), None)
-                    mus_groups[mus_index].append(mus_name)
-                    fmax.append(calibrated_params['calibrated_params']['fmax_scaler_' + optimized_muscles[mus_index]].item()[0][0] * muscle['fmax'][0,0].item())
-                    lceopt.append(calibrated_params['calibrated_params']['lceopt_scaler_' + optimized_muscles[mus_index]].item()[0][0] * muscle['lceopt'][0,0].item())
-                except:
-                    fmax.append(muscle['fmax'][0,0].item())
-                    lceopt.append(muscle['lceopt'][0,0].item())
-
-            if 'supra' in mus_name or 'infra' in mus_name:
-                fmax[i] = fmax[i] * RC_lim
-                print(mus_name,' ..', fmax[i])
-                    
-    print(lceopt)
-    print(fmax)
-    mus_lengths_full = sp.zeros(nmus,1)
-    mus_forces = sp.zeros(nmus,1)
-    mus_forces_objective = []
-    JacInSpat_full = sp.zeros(11,nmus)
-    xforce = 0
-    yforce = 0
-    zforce = 0
-    
-    for imus in range(nmus):
-    # for imus in range(44,45):
-        muscle = model_struct['model']['muscles'].item()[0,imus]
-        isWrapped = muscle['isWrapped'].item()
-        mus_name = muscle['name'][0,0].item()
-
-        if isWrapped == 0:
-            # if not wrapped, calculate length and moment arms analytically
-            origin = muscle['origin_frame'].item()
-            insertion = muscle['insertion_frame'].item()
-            O_pos = muscle['origin_position'].item()[0]
-            I_pos = muscle['insertion_position'].item()[0]
-            L = analytic_length_quat(origin, insertion, O_pos, I_pos, q_new[4:], model_struct)
-            Jac = -sp.Matrix([L]).jacobian(q_new).T
-            vce = -sp.Matrix(Jac[4:-1]).T * sp.Matrix([dquatdSC,dquatdAC,dquatdGH,dqdtEL])
-            # vce = 0
-                        
-            TEsc = 1/2 * G(q_new[4:8])*sp.Matrix(Jac[4:8])
-            TEac = 1/2 * G(q_new[8:12])*sp.Matrix(Jac[8:12])
-            TEgh = 1/2 * G(q_new[12:16])*sp.Matrix(Jac[12:16])
-            TEel = 1/2 * sp.Matrix(Jac[16:18])
-            
-            iJacInSpat = sp.Matrix(TEsc).col_join(TEac).col_join(TEgh).col_join(TEel)
-            JacInSpat_full[:,imus] = iJacInSpat
-
-            # print('analytic')
-            
-        elif isWrapped == 1:
-            
-            name = muscle['name'].item()
-            # print(name)
-            npolterms = muscle['Quaternion'][0,0]['lparam_count'].item()
-            polcoeff_np = muscle['Quaternion'][0,0]['lcoefs'].item()
-            polcoeff = sp.Matrix(polcoeff_np)
-            expon_np = muscle['Quaternion'][0,0]['lparams'].item()
-            expon = sp.Matrix(expon_np)
-            musdof = muscle['dof_indeces'].item()
-            nmusdof = muscle['dof_count'].item()
-            L = 0
-            
-
-            for i in range(npolterms.item()):
-             # Add this term's contribution to the muscle length
-                term = polcoeff[i]
-                for j in range(nmusdof.item()):
-                    mdof = musdof[j];
-                    for k in range(expon_np[i,j].item()):
-                        term = term * qpol[int(mdof-1)];
-
-                L = L + term;
-            jac = -sp.Matrix([L]).jacobian(qpol).T
-            vce = -sp.Matrix(jac[3:-1]).T * sp.Matrix([sp.Matrix(dquatdSC[1:4]),sp.Matrix(dquatdAC[1:4]),sp.Matrix(dquatdGH[1:4]),dqdtEL])
-            # vce = 0
-            TEsc = invJtrans(q_new[4:8])*sp.Matrix(jac[3:6])
-            TEac = invJtrans(q_new[8:12])*sp.Matrix(jac[6:9])
-            TEgh = invJtrans(q_new[12:16])*sp.Matrix(jac[9:12])
-            TEel = sp.Matrix(jac[12:14])
-            iJacInSpat = sp.Matrix(TEsc).col_join(TEac).col_join(TEgh).col_join(TEel)
-            JacInSpat_full[:,imus] = iJacInSpat
-            # print('poly')
-            
-        mus_lengths_full[imus] = L
-
-        mus_forces[imus] = muscle_force(actSym[imus],L,vce,fmax[imus],lceopt[imus],lslack[imus],vmax[imus],False)
-
-        # if muscle['crossesGH'] == 1:
-        try:
-            xparam_count = muscle['xparam_count'].item()
-            xparams = muscle['xparams'].item()
-            xcoefs = muscle['xcoefs'].item()
-            yparam_count = muscle['yparam_count'].item()
-            yparams = muscle['yparams'].item()
-            ycoefs = muscle['ycoefs'].item()
-            zparam_count = muscle['zparam_count'].item()
-            zparams = muscle['zparams'].item()
-            zcoefs = muscle['zcoefs'].item()
-            xvec = 0
-            yvec = 0
-            zvec = 0
-            
-
-            for i in range(xparam_count.item()):
-             # Add this term's contribution to the muscle length
-                term = xcoefs[i]
-                for j in range(nmusdof.item()):
-                    mdof = musdof[j];
-                    for k in range(xparams[i,j].item()):
-                        term = term * qpol[int(mdof-1)];
-
-                xvec = xvec + term
-    
-            for i in range(yparam_count.item()):
-             # Add this term's contribution to the muscle length
-                term = ycoefs[i]
-                for j in range(nmusdof.item()):
-                    mdof = musdof[j];
-                    for k in range(yparams[i,j].item()):
-                        term = term * qpol[int(mdof-1)];
-
-                yvec = yvec + term
-    
-            for i in range(zparam_count.item()):
-             # Add this term's contribution to the muscle length
-                term = zcoefs[i]
-                for j in range(nmusdof.item()):
-                    mdof = musdof[j];
-                    for k in range(zparams[i,j].item()):
-                        term = term * qpol[int(mdof-1)]
-
-                zvec = zvec + term
-            
-            xforce += xvec * mus_forces[imus]
-            yforce += yvec * mus_forces[imus]
-            zforce += zvec * mus_forces[imus]
-
-        except:
-            pass
-            
-
-    FQ = JacInSpat_full * mus_forces
-    
-    TE = sp.Matrix(FQ[:-1])
-    TE = TE.subs(q_new[17],120*np.pi/180)
-    JacInSpat = JacInSpat_full.subs(q_new[17],120*np.pi/180)
-    mus_lengths = mus_lengths_full.subs(q_new[17],120*np.pi/180)
-    mus_forces = mus_forces.subs(q_new[17],120*np.pi/180)
-    mus_forces_objective = sp.Matrix(mus_forces_objective).subs(q_new[17],120*np.pi/180)
-
-    GH_mus_forces = sp.Matrix([xforce, yforce, zforce])
-    GH_mus_forces = GH_mus_forces.subs(q_new[17],120*np.pi/180)
-    
-    
-    symbols_list = TE.free_symbols
-    t = sp.Symbol('t')
-    actSym_list = [i for i in symbols_list if str(i).startswith('actSym')]
-    
-    act = []
-    for i in actSym_list:
-        act.append(me.dynamicsymbols(str(i).replace('Sym','')))
-
-    print(act)
-    act_subs = dict(zip(actSym_list,act))
-    TE_subs = me.msubs(TE, act_subs)
-    mus_forces_objective_subs = me.msubs(mus_forces_objective, act_subs)
-    GH_mus_forces_subbed = me.msubs(GH_mus_forces, act_subs)
-
-    conoid_lopt = model_struct['model']['conoid_length'].item()[0][0]
-    conoid_k = model_struct['model']['conoid_stiffness'].item()[0][0]
-    conoid_eps = model_struct['model']['conoid_eps'].item()[0][0]
-    conoid_origin = model_struct['model']['conoid_origin'].item()[0]
-    conoid_insertion = model_struct['model']['conoid_insertion'].item()[0]
-    conoid_length = analytic_length_quat('clavicle_r','scapula_r', conoid_origin, conoid_insertion, q_new[4:], model_struct)
-    F_conoid = conoid_force(conoid_length, conoid_lopt, conoid_k, conoid_eps)
-    Jac_conoid = -sp.Matrix([conoid_length]).jacobian(q_new).T                
-    TEsc_conoid = 1/2 * G(q_new[4:8])*sp.Matrix(Jac_conoid[4:8])
-    TEac_conoid = 1/2 * G(q_new[8:12])*sp.Matrix(Jac_conoid[8:12])
-    TEgh_conoid = 1/2 * G(q_new[12:16])*sp.Matrix(Jac_conoid[12:16])
-    TEel_conoid = 1/2 * sp.Matrix(Jac_conoid[16:18])
-    JacInSpat_conoid = sp.Matrix(TEsc_conoid).col_join(TEac_conoid).col_join(TEgh_conoid).col_join(TEel_conoid)
-    TE_conoid = F_conoid * JacInSpat_conoid
-    
-    return TE_subs, act, TE_conoid[:-1], fmax_init, fmax_range, lceopt_init, lceopt_range, mus_groups, GH_mus_forces_subbed, mus_forces_objective_subs
-
-
-def muscle_force(act, lmt, vce, fmax, lceopt, lslack, vmax, add_damping = False):
+def muscle_force(act, lmt, vce, fmax, lceopt, lslack, vmax):
     """Compute muscle force using a Hill-type muscle model.
 
     The resulting normalized force is scaled by ``fmax``:
@@ -684,12 +711,12 @@ def muscle_force(act, lmt, vce, fmax, lceopt, lslack, vmax, add_damping = False)
 
     Parameters
     ----------
-    act : sympy expression or float
-        Muscle activation level.
-    lmt : sympy expression or float
-        Muscle-tendon length.
+    act : sympy expression
+        Activation symbol.
+    lmt : sympy expression
+        Symbolic muscle-tendon length.
     vce : sympy Matrix
-        Contractile element velocity (expects first element at ``vce[0,0]``).
+        Symbolic contractile element velocity.
     fmax : sympy expression or float
         Maximum isometric muscle force.
     lceopt : sympy expression or float
@@ -699,8 +726,6 @@ def muscle_force(act, lmt, vce, fmax, lceopt, lslack, vmax, add_damping = False)
     vmax : sympy expression or float
         Maximum normalized shortening velocity coefficient. The absolute
         velocity scale is ``vmax * lceopt``.
-    add_damping : bool, optional
-        Reserved flag for possible damping extension (currently unused).
 
     Returns
     -------
@@ -756,11 +781,16 @@ def act_dynamics(a,u,t_act = 0.015,t_deact = 0.05):
 def conoid_force(lmt, lopt, k, eps):
     """Conoid ligament force (Chadwick, 2014) with smooth tension-only behavior.
 
-    Args:
-        lmt: Symbolic ligament length from the polynomial model.
-        lopt: Slack/reference ligament length (float).
-        k: Ligament stiffness (float).
-        eps: Smoothing constant at the zero-force transition (float).
+    Parameters
+    ----------
+    lmt : sympy expression
+        Symbolic ligament length.
+    lopt : sympy expression or float
+        Slack/reference ligament length.
+    k : sympy expression or float
+        Ligament stiffness.
+    eps : sympy expression or float
+        Smoothing constant at the zero-force transition.
 
     Returns:
         sympy.Expr: Ligament tensile force expression.
@@ -774,9 +804,12 @@ def conoid_force(lmt, lopt, k, eps):
 def dquatdt(quat,w):
     """Compute quaternion derivative from quaternion and angular velocity.
 
-    Args:
-        quat: Quaternion components as SymPy dynamicsymbols [q0, q1, q2, q3].
-        w: Angular velocity components as SymPy dynamicsymbols [wx, wy, wz].
+    Parameters
+    ----------
+        quat : sympy.Matrix
+            Quaternion components as SymPy dynamicsymbols [q0, q1, q2, q3].
+        w : sympy.Matrix
+        Angular velocity components as SymPy dynamicsymbols [wx, wy, wz].
 
     Returns:
         sympy.Matrix: Quaternion time derivative dq/dt.
@@ -789,7 +822,7 @@ def invQuat_sp(q):
 
     return sp.Matrix([q[0],-q[1],-q[2],-q[3]])
 
-def invJtrans(quat):
+def invEtrans(quat):
     q1 = quat[0];
     q2 = quat[1];
     q3 = quat[2];
@@ -1057,7 +1090,6 @@ def create_eoms_quat_w_RF(OS_struct,weight = 0, derive = 'symbolic',gen_matlab_f
         point_offset.append(me.Point('point_offset_' + str(seg)))
         masscenter.append(me.Point('masscenter_' + str(seg)))
     mass[-1] += weight
-    print(mass)
     # inertial frame and point
     frame_ground = me.ReferenceFrame('frame_ground')
     point_ground = me.Point('point_ground')
@@ -1125,8 +1157,6 @@ def create_eoms_quat_w_RF(OS_struct,weight = 0, derive = 'symbolic',gen_matlab_f
             point_offset[i].v2pt_theory(N_GH,frame_ground,frame[i])
 
             f_aux = [(point_offset[i-1], 800*(faux[0]*frame[i-1].x + faux[1]*frame[i-1].y + faux[2]*frame[i-1].z)),(N_GH, -800*(faux[0]*frame[i-1].x + faux[1]*frame[i-1].y + faux[2]*frame[i-1].z))]
-
-            
 
             GH_spring_torque = joint_spring_quat(q[8:12],sp.Matrix([1,0,0,0])) * 0.25
             spring.append((frame[i], GH_spring_torque[0]*frame[i].x + GH_spring_torque[1]*frame[i].y + GH_spring_torque[2]*frame[i].z))
@@ -1303,7 +1333,7 @@ def create_eoms_quat_w_RF(OS_struct,weight = 0, derive = 'symbolic',gen_matlab_f
     FO = KM.forcing_full
     xdot = (KM.q.col_join(KM.u)).diff()
     
-    return MM,FO,q,w,faux,fr,frstar,kinematical,xdot,first_elips_scale,elips_trans
+    return q,w,faux,fr,frstar,kinematical
 
 def create_eoms_quat_no_RF(OS_struct,weight = 0, derive = 'symbolic',gen_matlab_functions = None):
     
@@ -1593,7 +1623,7 @@ def create_eoms_quat_no_RF(OS_struct,weight = 0, derive = 'symbolic',gen_matlab_
     FO = KM.forcing_full
     xdot = (KM.q.col_join(KM.u)).diff()
     
-    return MM,FO,q,w,fr,frstar,kinematical,xdot,first_elips_scale,elips_trans
+    return q,w,fr,frstar,kinematical
 
 #############################################
                 #EUL#
@@ -1697,7 +1727,7 @@ def create_eoms_eul(OS_struct, derive = 'symbolic',gen_matlab_functions = None,G
     # set gravity force and damping of first body
     FG = [(masscenter[0], -mass[0] * g * frame_ground.y)]
     DAMP = [(frame[0], -c*(rot[0].dot(frame[0].x)*frame[0].x+rot[0].dot(frame[0].y)*frame[0].y+rot[0].dot(frame[0].z)*frame[0].z))]
-    kindeq = []
+    kinematical = []
 
     # iterate over segments 2:end (first body is already done)
     for i in range(1,3):
@@ -1725,7 +1755,7 @@ def create_eoms_eul(OS_struct, derive = 'symbolic',gen_matlab_functions = None,G
         DAMP.append((frame[i-1], -damping))
 
     for i in range(9):
-        kindeq.append(q[i].diff()-u[i])
+        kinematical.append(q[i].diff()-u[i])
 
     # symbols (or values) for ulna and radius
     ulna_rot_frame = me.ReferenceFrame('ulna_rot_frame')
@@ -1764,7 +1794,7 @@ def create_eoms_eul(OS_struct, derive = 'symbolic',gen_matlab_functions = None,G
                             +ulna_rot_frame.z*EL_rot_axis[2])))
     DAMP.append((ulna_rot_frame,c*u[9]*(ulna_rot_frame.x*EL_rot_axis[0]+ulna_rot_frame.y*EL_rot_axis[1]
                                 +ulna_rot_frame.z*EL_rot_axis[2])))
-    kindeq.append(u[9]-q[9].diff(t))
+    kinematical.append(u[9]-q[9].diff(t))
 
     point_offset[3].set_pos(point_offset[2],offset[0+3*3]*frame[3].x + offset[1+3*3]*frame[3].y + offset[2+3*3]*frame[3].z)
     point_offset[3].v2pt_theory(point_offset[2],frame_ground,frame[3]);
@@ -1872,14 +1902,14 @@ def create_eoms_eul(OS_struct, derive = 'symbolic',gen_matlab_functions = None,G
     cont_force2 = [(contact_point2,frame_ground.x*Fx2+frame_ground.y*Fy2+frame_ground.z*Fz2)]
     CONT = cont_force1+cont_force2
     
-    KM = me.KanesMethod(frame_ground, q_ind=q, u_ind=u, kd_eqs=kindeq)
+    KM = me.KanesMethod(frame_ground, q_ind=q, u_ind=u, kd_eqs=kinematical)
     (fr, frstar) = KM.kanes_equations(BODY, (FG+DAMP+CONT))
     MM = KM.mass_matrix_full
     FO = KM.forcing_full
     xdot = (KM.q.col_join(KM.u)).diff()
     print('equations created')
 
-    return MM,FO,q,u,fr,frstar,kindeq,xdot,first_elips_scale,elips_trans
+    return q,u,fr,frstar,kinematical
 
 
 def MatlabFunction(function,fun_name,assignto,coordinates,speeds,inputs,body_constants,segments,other_constants,muscle_constants,parameters,folder):

@@ -1,135 +1,14 @@
 addpath Matlab_functions/
-% clc
-%choose two results struct to compare
-% motion_name = 'Elevation2_yzy';
-% GH_seq = 'YZY';
-% weighteul = '101';
-% weightquat = '304';
-% muscle_group = {'delt'};
-% folders = {[folder_path,'results_quat_QuatInit_100.mat']};
+%%  Plot the activations of two elements affected by gimbal lock. 
+OS_model = ['Motions/',participant,'/OS_model.mat'];
+participant = 'par2';
+motion_name = 'Elevation_yzy';
+res_q1 = {['res_euler_',motion_name,'_50'],'euler',motion_name,'YZY',participant,'Euler angles'};
+res_q2 = {['res_quat_',motion_name,'_200'],'quat',motion_name,'YZY',participant,'Quaternions'};
+plot_IEEE_activations(OS_model,["pect_maj_c_2","delt_scap_6"],0,res_q1,res_q2)
 
-
-% folder_path = ['Motions/',motion_name,'/'];
-% OS_model = [folder_path,'OS_model.mat'];
-% OS_struct = load([folder_path,motion_name,'.mat']);
-% folders = {[folder_path,'res_euler_',motion_name,'_',weighteul,'.mat'],[folder_path,'res_quat_',motion_name,'_',weightquat,'.mat']};
-% % plot_kinematics(folders,OS_struct,GH_seq);
-% % plot_SCx(folders,OS_model);
-% % plot_ESB(folders, OS_model, OS_struct)
-% % plot_elipsoid_eq([folder_path,'res_euler_',motion_name,'_',weighteul,'.mat'],OS_model)
-
-% plot_activations(folders,muscle_group,OS_model,OS_struct);
-% plot_muscles(folders,muscle_group,OS_model, GH_seq);
-% 
-% EMG_struct = 'Experimental_data/EMG_struct.mat';
-% plot_activations_EMG(folders, EMG_struct, OS_model);
-% plot_activations(folders,muscle_group,OS_model)
-% mus_group = 'ter';
-% mus_group = ["delt_scap10","delt_scap11","delt_clav_1","delt_clav_2","delt_clav_3","serr_ant_1","serr_ant_2","serr_ant_3","trap_clav_1","trap_clav_2","trap_scap10","trap_scap11"];
-% % % 
-% 
-% res_eul_yzy = {'Scabduction_yzy_scaled_noexc','euler','90','YZY'};
-% res_quat_yzy = {'Scabduction_yzy_scaled_noexc','quat','303','YZY'};
-% plot_GH_seq = 'YZY';
-% motion_name = 'Scabduction_yzy_scaled_noexc';
-% mus_group = 'delt';
-% OS_model = ['Motions/',motion_name,'/OS_model.mat'];
-% OS_struct = load(['Motions/',motion_name,'/',motion_name,'.mat']);
-% % plot_paper_kinematics(OS_struct,plot_GH_seq,1,res_eul_yzy,res_quat_yzy)
-% % % plot_polynomials(OS_struct,OS_model,mus_group,res_eul_yzy)
-% plot_paper_activations(OS_model,mus_group,1,res_eul_yzy,res_quat_yzy)
-% % % plot_activations_EMG('EMG_data\EMG_scabduction.mat', OS_model,res_eul_yzy, res_quat_yzy)
-% % plot_objective_values(res_eul_yzy,res_quat_yzy)
-% % % plot_GH_near_GL(res_eul_yzy)
-
-% res_eul_yzy = {'Flexion_yzy_scaled','euler','101','YZY'};
-% res_quat_yzy = {'Flexion_yzy_scaled','quat','314','YZY'};
-% plot_GH_seq = 'YZY';
-% motion_name = 'Flexion_yzy_scaled';
-% mus_group = 'delt';
-% OS_struct = load(['Motions/',motion_name,'/',motion_name,'.mat']);
-% OS_model = ['Motions/',motion_name,'/OS_model.mat'];
-% plot_paper_kinematics(OS_struct,plot_GH_seq,1,res_eul_yzy,res_quat_yzy)
-% % plot_polynomials(OS_struct,OS_model,mus_group,res_eul_yzy,res_quat_yzy)
-% % plot_paper_activations(OS_model,mus_group,1,res_eul_yzy,res_quat_yzy)
-% % plot_activations_EMG('EMG_data\EMG_flexion.mat', OS_model,res_eul_yzy,res_quat_yzy)
-
-% res_eul_yzx = {'Elevation2_yzx','euler','101','YZX'};
-% res_quat_yzx = {'Elevation2_yzx_noexc','quat','303','YZY'};
-% res_eul_yzy = {'Elevation2_yzy_noexc','euler','101','YZY'};
-% plot_GH_seq = 'YZY';
-% motion_name = 'Elevation2_yzy';
-% % mus_group = ["delt_scap_5","delt_scap_6","delt_scap_7","delt_scap_8","subscap_5"];
-% mus_group = ['delt'];
-% OS_struct = load(['Motions/',motion_name,'/',motion_name,'.mat']);
-% OS_model = ['Motions/',motion_name,'/OS_model.mat'];
-% % plot_paper_kinematics(OS_struct, plot_GH_seq,1,res_eul_yzy,res_quat_yzx)
-% % plot_activations_EMG('EMG_data\EMG_elevation.mat', OS_model, res_eul_yzx,res_quat_yzx,res_eul_yzy)
-% plot_paper_activations(OS_model,mus_group,1,res_eul_yzy,res_quat_yzx)
-% % plot_polynomials(OS_struct,OS_model,mus_group,res_eul_yzx,res_quat_yzx,res_eul_yzy)
-% % plot_conoid_length(OS_model,res_eul_yzx)
-% % plot_GH_near_GL(res_eul_yzy,res_eul_yzx)
-% % plot_objective_values(res_eul_yzx,res_quat_yzx,res_eul_yzy)
-% 
-% participant = '3NA';
-% res_quat_yzy = {'Elevation_yzy','quat','234','YZY',participant,'Quat'};
-% res_eul_yzy = {'Elevation_yzy','euler','101','YZY',participant,'Eul'};
-% plot_GH_seq = 'YZY';
-% motion_name = 'Elevation_yzy';
-% mus_group = ['delt_scap'];
-% % mus_group = ["delt_scap_6","delt_scap_7","delt_scap_8","delt_scap_9"];
-% OS_struct = load(['Motions/',participant,'/',motion_name,'/',motion_name,'.mat']);
-% OS_model = ['Motions/',participant,'/OS_model.mat'];
-% % plot_paper_kinematics(OS_struct,OS_model, plot_GH_seq,0,res_quat_yzy)
-% % plot_activations_EMG(['Motions\',participant,'\','Elevation_yzy\EMG_',participant,'_Elevation.mat'], OS_model,'one', res_quat_yzy)
-% plot_paper_activations(OS_model,mus_group,1,res_eul_yzy,res_quat_yzy)
-% plot_polynomials(OS_struct,OS_model,mus_group,res_quat_yzy)
-% plot_conoid_length(OS_model,res_quat_yzy)
-% % plot_elipsoid_eq(OS_model,res_eul_yzy)
-% % 
-% participant = '3NA';
-% res_quat_yzy = {'Scabduction_yzy','quat','234','YZY',participant,'quat'};
-% res_eul_yzy = {'Scabduction_yzy','euler','101','YZY',participant,'eul'};
-% plot_GH_seq = 'YZY';
-% motion_name = 'Scabduction_yzy';
-% % mus_group = ["delt_scap_4","delt_scap_5","delt_scap_6","delt_scap_7","delt_scap_8","delt_scap_9","delt_scap10","delt_scap11"];
-% mus_group = ['delt_scap10'];
-% OS_struct = load(['Motions/',participant,'/',motion_name,'/',motion_name,'.mat']);
-% OS_model = ['Motions/',participant,'/OS_model.mat'];
-% % plot_paper_kinematics(OS_struct,OS_model, plot_GH_seq,0,res_quat_yzy)
-% % plot_activations_EMG(['Motions\',participant,'\','Scabduction_yzy\EMG_',participant,'_Scabduction.mat'], OS_model,'one',res_quat_yzy)
-% plot_paper_activations(OS_model,mus_group,1,res_eul_yzy,res_quat_yzy)
-% % plot_polynomials(OS_struct,OS_model,mus_group,res_eul_yzy,res_quat_yzy)
-% % % plot_conoid_length(OS_model,res_quat_yzy)
-% % % plot_elipsoid_eq(OS_model,res_eul_yzy)
-% % folder_path = ['Motions/',participant,'/Scabduction_yzy/'];
-% % muscle_group = {'serr_ant_3'};
-% % folders = {[folder_path,'res_euler_',motion_name,'_101.mat'],[folder_path,'res_quat_',motion_name,'_234.mat']};
-% % plot_muscles(folders,muscle_group, OS_model, 'YZY')
-
-% % 
-% participant = '1LU';
-% res_quat_yzy = {'Flexion_yzy','quat','234','YZY',participant};
-% res_eul_yzy = {'Flexion_yzy','euler','101','YZY',participant};
-% plot_GH_seq = 'YZY';
-% motion_name = 'Flexion_yzy';
-% % mus_group = ["delt_scap_5","delt_scap_6","delt_scap_7","delt_scap_8","subscap_5"];
-% mus_group = ['trap'];
-% OS_struct = load(['Motions/',participant,'/',motion_name,'/',motion_name,'.mat']);
-% OS_model = ['Motions/',participant,'/OS_model.mat'];
-% % plot_paper_kinematics(OS_struct,OS_model, plot_GH_seq,1,res_quat_yzy)
-% % plot_activations_EMG(['Motions\',participant,'\','Flexion_yzy\EMG_',participant,'_Flexion.mat'], OS_model,'one',res_quat_yzy)
-% % plot_paper_activations(OS_model,mus_group,1,res_quat_yzy)
-% % plot_polynomials(OS_struct,OS_model,mus_group,res_eul_yzy)
-% % plot_conoid_length(OS_model,res_quat_yzy)
-% % % plot_elipsoid_eq(OS_model,res_eul_yzy)
-% 
-% participant = '3NA';
-% motion_name = 'Elevation_yzy';
-% res_q1 = {['res_euler_',motion_name,'_50'],'euler',motion_name,'YZY',participant,'Euler angles'};
-% res_q2 = {['res_quat_',motion_name,'_200'],'quat',motion_name,'YZY',participant,'Quaternions'};
-% 
-participant = '3NA';
+%%
+participant = 'par2';
 motion_name = 'All_motions';
 res_q1 = {['res_SHR_0'],'quat',motion_name,'YZY',participant,'Healthy'};
 res_q2 = {['res_SHR_5'],'quat',motion_name,'YZY',participant,'RC-limited'};
@@ -149,8 +28,7 @@ OS_model = ['Motions/',participant,'/OS_model.mat'];
 % plot_EMG_optim_IEEE(['Motions\',participant,'\',motion_name,'\EMG_',participant,'_',motion_name,'.mat'], OS_model,'one',1,res_q1,res_q2)
 % plot_EMG_healthy_RClim_IEEE(['Motions\',participant,'\',motion_name,'\EMG_',participant,'_',motion_name,'_fig.mat'], OS_model,'one',1,res_q1,res_q2)
 
-% plot_IEEE_activations(OS_model,["pect_maj_c_2","delt_scap_6"],0,res_q1,res_q2)
-% plot_IEEE_kinematics(OS_struct,res_q1,res_q2)
+plot_IEEE_kinematics(OS_struct,res_q1,res_q2)
 % plotGHStabilityAnglesIEEE(res_q1,res_q2)
 % plotGHStabilityAnglesIEEE_sanalysis()
 % plot_IEEE_kinematics_sanalysis(OS_struct)
@@ -262,11 +140,8 @@ function plot_IEEE_activations(OS_model,mus_group,plot_excitation,varargin)
     lg.Layout.Tile = 'south';
     lg.Orientation = "horizontal";
     lg.ItemTokenSize = 20;
-    % exportgraphics(fig,['Motions\',participant,'\',motion_name,'\Results\activations_only_',participant,'_',motion_name,'.png'],'Resolution',600);
-    % exportgraphics(gca,'act_GL.jpg',...   % since R2020a
-    % exportgraphics(gcf,'activation_near_GL.png','Resolution',600);
-    % 'BackgroundColor','none')
-    exportgraphics(gcf,'IEEE_GL_activation.png','Resolution',600);
+
+    % exportgraphics(gcf,'IEEE_GL_activation.png','Resolution',600);
 
 end
 

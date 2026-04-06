@@ -70,7 +70,6 @@ training_data = ['Motions\',participant,'\',motion_name,'\',motion_name,'_traini
 das3_polynomials(osim_file,polyfiles_dir,training_data,'YZY','gen_polyvalues',musclepoly_file); %'gen_polyvalues'
 model = das3_readosim(osim_file,['Motions\',participant,'\',motion_name,'\',polyfiles_dir,'\',musclepoly_file],['Motions\',participant,'\',motion_name,'\',polyfiles_dir,'\',musclepoly_file]);
 save(['Motions\',participant,'\',motion_name,'\','OS_model'],'model')
-disp("jsme tu")
 %         correct = 1;
 %     catch
 %         correct = 0;
