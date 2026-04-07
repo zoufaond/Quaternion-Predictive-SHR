@@ -6,24 +6,6 @@ from scipy.spatial.transform import Rotation as spat
 import matplotlib.pyplot as plt
 import pickle
 
-def plot_results(solution, vals , time, num_nodes):
-    solution_mat = solution[:13*num_nodes].reshape(13,num_nodes)
-    sol_glob = solution_mat.copy()
-    sol_glob[0:4,:] = solution_mat[0:4,:]
-    for i in range(num_nodes):
-        sol_glob[4:8,i] = mulQuat_np(solution_mat[0:4,i],solution_mat[4:8,i])[:,0]
-        # print(mulQuat_np(solution_mat[0:4,i],solution_mat[4:8,i])[:,0])
-
-    vals_mat = vals.reshape(13,num_nodes)
-
-    fig, axs = plt.subplots(13)
-    for j in range(13):
-        axs[j].plot(time,vals_mat[j,:],marker = 'o')
-        axs[j].plot(time,sol_glob[j,:])
-        fig.set_figheight(10)
-
-    # print(sol_glob-vals_mat)
-
 def initial_guess_from_solution(solution_file,num_free):
 
     solution = sc.io.loadmat(solution_file)['data'][0,0]
@@ -31,7 +13,7 @@ def initial_guess_from_solution(solution_file,num_free):
 
     return initial_guess
 
-def exp_emg(emg_struct_name,num_nodes, emg_names):
+def exp_emg(emg_struct_name,num_nodes, emg_names = ['AnteriorDelt']):
     emg_struct = sc.io.loadmat(emg_struct_name)
     data = emg_struct['data']['num_'+str(1)]
     time = np.linspace(0,1,len(data[0,0][emg_names[0]].item()[0]))
@@ -148,6 +130,7 @@ def numeric_velocity_from_trajectory(trajectory, dt):
     return velocity
 
 def exp_trajectory_quat_myobj(trajectory, clav_pos):
+    """"Convert joint rotations to segments orientations with respect to thorax to be used as a tracking reference in the objective function."""
     new_traj = trajectory.copy()
     num_nodes = np.shape(trajectory)[1]
 
@@ -170,7 +153,7 @@ def exp_trajectory_eul(mot_struct_name,interval_value):
     num_nodes = 101
     time_new = np.linspace(0,duration,num_nodes)
     
-    eul_coords = mot_struct['mot_struct']['euler'][0,0] #mot_euler_mod
+    eul_coords = mot_struct['mot_struct']['euler'][0,0]
     num_coords = np.shape(eul_coords)[1]
     eul_new = np.zeros([num_coords,num_nodes])
     
@@ -214,44 +197,6 @@ def exp_trajectory_eul_myobj(trajectory, GH_seq = 'YZY'):
             
     return new_traj
 
-def das_trajectory(data_struct,num_nodes,duration,weight, coords):
-    time = np.linspace(0.0, duration, num=num_nodes)
-    interval_value = duration/(num_nodes - 1)
-    x0 = data_struct['params']['InitPosOptQuat'][0,0]['initCondQuat'].item()
-    x0eul = data_struct['params']['InitPosOptQuat'][0,0]['initCondEul'].item()
-    GH_motion_Eul = np.array([np.ones(num_nodes)*x0eul[6],
-                          (-np.cos(time*np.pi)+1)*weight+x0eul[7],
-                          np.ones(num_nodes)*x0eul[8]]).T
-    GH_motion_R = spat.from_euler('YZY',GH_motion_Eul)
-    GH_motion_Q = GH_motion_R.as_quat(scalar_first=True).T
-    
-    
-    
-    if coords == 'quaternion':
-        traj = np.zeros(13*num_nodes)
-        for i in range(8):
-            traj[i*num_nodes:(i+1)*num_nodes] = x0[i]
-
-            traj[8*num_nodes:(8+4)*num_nodes] = GH_motion_Q.flatten()
-            traj[(8+4)*num_nodes:(8+5)*num_nodes] = x0[12]
-
-            traj_split = np.vstack(np.split(traj,13))
-            d_traj = np.concatenate((np.zeros((13,1)),np.diff(traj_split)),axis=1)/interval_value
-            init_guess = np.concatenate((traj,d_traj.flatten()))
-        
-    elif coords == 'euler':
-        traj = np.zeros(10*num_nodes)
-        for i in range(6):
-            traj[i*num_nodes:(i+1)*num_nodes] = x0eul[i]
-
-            traj[6*num_nodes:(6+3)*num_nodes] = GH_motion_Eul.T.flatten()
-            traj[(6+3)*num_nodes:(6+4)*num_nodes] = x0eul[9]
-
-            traj_split = np.vstack(np.split(traj,10))
-            d_traj = np.concatenate((np.zeros((10,1)),np.diff(traj_split)),axis=1)/interval_value
-            init_guess = np.concatenate((traj,d_traj.flatten()))
-    
-    return traj, init_guess
 
 def sol2mot_quat(solution, num_nodes, num_q, time, file_name = 'traj_opt.mot', GH_seq = 'YZY'):
     traj_quat = solution[:(num_nodes*num_q)]
@@ -384,8 +329,7 @@ def input2mat(solution, num_nodes, num_q, num_u, num_faux, num_inputs, activatio
     for i in range(137):
         try:
             ind = dict_exc_index.get(f'act_{i+1}')
-            data_exc[:,i] = solution[(num_q + num_u + num_inputs + num_faux + ind)*num_nodes:(num_q + num_u + num_inputs + 3 + ind + 1)*num_nodes]
-            # data_exc[:,i] = solution[(num_q + num_u + num_inputs + ind)*num_nodes:(num_q + num_u + num_inputs + ind + 1)*num_nodes]
+            data_exc[:,i] = solution[(num_q + num_u + num_inputs + num_faux + ind)*num_nodes:(num_q + num_u + num_inputs + num_faux + ind + 1)*num_nodes]
 
         except:
             continue
@@ -472,12 +416,12 @@ def T_y(y):
                          [0,0,0,1]])
     return trans_y
 
-def T_y(z):
-    trans_y = sp.Matrix([[1,0,0,0],
+def T_z(z):
+    trans_z = sp.Matrix([[1,0,0,0],
                          [0,1,0,0],
                          [0,0,1,z],
                          [0,0,0,1]])
-    return trans_y
+    return trans_z
 
 def R_x_sp(phix):
     rot_phix = sp.Matrix([[1,0          ,0           ,0],

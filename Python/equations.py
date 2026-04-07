@@ -65,7 +65,6 @@ def objective_scalers_restriction(mus_group,w_fmax,w_lceopt):
     Parameters:
     -----------
         mus_group: List of muscle groups; each group name is extracted from index [0][0:-1].
-        optimize: Optimization flag (unused in current implementation).
         w_fmax: Weight for fmax scaler objective term.
         w_lceopt: Weight for lceopt scaler objective term.
     
@@ -109,22 +108,14 @@ def objective_min_activation(acts,interval_value,include_EMG = False, muscles_em
     Objective function for activation minimization with optional EMG-based constraints.
     
     Parameters:
+    -----------
         acts: List of activation symbols.
-        interval_value: Scaling factor for the objective function.
+        interval_value: Interval value.
         include_EMG: Boolean flag to enable EMG-based minimization (True) or activation-only 
                      minimization (False). When True, muscle group activations are minimized 
                      against corresponding EMG signals. When False, only activation minimization 
                      is performed.
-    
-    Details:
-        muscles_emg_optim: List of muscle element groups corresponding to EMG recording channels.
-                           When multiple muscle elements belong to one EMG group, their average 
-                           activation is calculated and then minimized against the corresponding 
-                           EMG signal.
-        weight_index: Parameter to turn the EMG objective on/off for particular time intervals 
-                      (e.g., where the EMG signal is not reliably defined).
-        w_min_squared: Weight for pure activation minimization term.
-        w_min_emg: Weight for the EMG-based activation/excitation minimization term.
+        muscles_emg_tracked: List of muscle elements matching EMG signal. Each group is a list of corresponding activation symbols.
     
     Returns:
         obj_np: Lambdified objective function.
@@ -242,7 +233,12 @@ def objective_traj_quat(num_coords,interval_value, clav_pos,include_quat_norm = 
 
     return obj_np,obj_jac_np, obj_SC_np, obj_jac_SC_np
 
+
+
 def objective_traj_eul(num_coords,interval_value,GH_seq = 'YZY'):
+
+    """"Building the objective for Euler-angle-based model follows the same logic as for quaternion-based model"""
+
     x = sp.symbols(f'x1:{num_coords+1}')
     x_traj = sp.symbols(f'x_traj1:{num_coords+1}')
 
@@ -269,8 +265,8 @@ def objective_traj_eul(num_coords,interval_value,GH_seq = 'YZY'):
     
     elrot = sp.Matrix(x[9:10])
 
-    obj_SCrot = sp.Matrix([interval_value*sum((SCrot-sp.Matrix(x_traj[0:2])).applyfunc(lambda x: x**2))])
-    obj_SC_t0 = sp.Matrix([interval_value*sum((SCrot_t0-sp.Matrix(x_traj[0:3])).applyfunc(lambda x: x**2))])
+    obj_SCrot = sp.Matrix([interval_value*sum((SCrot-sp.Matrix(x_traj[0:2])).applyfunc(lambda x: x**2))]) # We exclude axial rotation of clavicle from the objective function
+    obj_SC_t0 = sp.Matrix([interval_value*sum((SCrot_t0-sp.Matrix(x_traj[0:3])).applyfunc(lambda x: x**2))]) # This is used at the inital node to prevent excessive conoid ligmament lengthening.
 
     obj_scapula_thorax = sp.Matrix([interval_value*sum((scapula_thorax-sp.Matrix(x_traj[3:6])).applyfunc(lambda x: x**2))])
     obj_humerus_thorax = sp.Matrix([interval_value*sum((humerus_thorax-sp.Matrix(x_traj[6:9])).applyfunc(lambda x: x**2))])
@@ -290,36 +286,30 @@ def objective_traj_eul(num_coords,interval_value,GH_seq = 'YZY'):
 def polynomials_quat(model_struct,q,u,derive,RC_lim, calibrated_params = None):
     """
     Calculates muscle-tendon forces, moment arms, and torques for a shoulder musculoskeletal model using quaternion-based kinematics and polynomial approximations for wrapped muscles.
+
     Parameters
     ----------
-    model_struct : Matlab Structure containing shoulder model data with nested dictionaries for muscles, conoid ligament properties, and kinematic frames.
+    model_struct : Matlab Structure containing shoulder model data from readosim.m function.
     q : List of generalized coordinates representing joint positions (excluding thorax quaternion and radius).
     u : List of generalized velocities.
-    derive : Derivation method, either 'symbolic' or 'numeric'. 'Numeric' uses the values instead of symbols and is quicker.
-    RC_lim : Rotator cuff muscle force limiter, scaling factor applied to rotator cuff muscles (supra, infra).
+    derive : Derivation method, either 'symbolic' or 'numeric'. 'Numeric' uses the corresponding values instead of symbols and is quicker.
+    RC_lim : Rotator cuff muscle force limiter, scaling factor applied to rotator cuff muscles (supra, infra). 1.0 means no scaling, values <1 reduce force, values >1 increase force.
     calibrated_params : Parameter calibration mode. If None, uses default muscle parameters. If 'calibrate_params', enables parameter optimization with scalers. If dict, applies pre-calibrated parameters from previous optimization. Default is None.
     
     Returns
     -------
     TE_subs : Generalized torques/forces (10x1) excluding pronation/supination.
     act :  List of muscle activation symbols as dynamic symbols.
-    TE_conoid : Torque contributions from conoid ligament (10x1).
-    fmax_init :  Initial values for maximum muscle force scalers (optimization parameters).
-    fmax_range : dict
-        Parameter ranges for maximum muscle force scalers.
-    lceopt_init : dict
-        Initial values for optimal muscle length scalers (optimization parameters).
-    lceopt_range : dict
-        Parameter ranges for optimal muscle length scalers.
-    mus_groups : list of lists
-        Grouped muscle names by optimization category.
-    GH_mus_forces_subbed : sympy.Matrix or numpy.ndarray
-        Glenohumeral joint reaction forces (3x1: x, y, z components).
-    mus_forces_objective_subs : sympy.Matrix or numpy.ndarray
-        Individual muscle forces formatted for optimization objectives.
+    TE_conoid : Torque contributions from conoid ligament (10x1) (to be consistent with EoMs shape, but it affects only the AC joint rotation).
+    fmax_init :  Initial values for maximum muscle force scalers.
+    fmax_range : Parameter ranges for maximum muscle force scalers.
+    lceopt_init : Initial values for optimal muscle length scalers.
+    lceopt_range : Parameter ranges for optimal muscle length scalers.
+    mus_groups : Grouped muscle elements that are scaled by the same scaler.
+    GH_mus_forces_subbed : Glenohumeral joint reaction forces (3x1: x, y, z components).
     """
 
-    
+    # polynomials were build with coordinates for thorax tilting and for pronation and supination, so we need to artifically add these coordinates
     q_thorax0 = me.dynamicsymbols('q_thorax0')
     q_thorax1 = me.dynamicsymbols('q_thorax1')
     q_thorax2 = me.dynamicsymbols('q_thorax2')
@@ -333,14 +323,16 @@ def polynomials_quat(model_struct,q,u,derive,RC_lim, calibrated_params = None):
     q_new.insert(0,q_thorax1)
     q_new.insert(0,q_thorax0)
 
-    qpol = q_new[1:4]+q_new[5:8]+q_new[9:12]+q_new[13:16]+q_new[16:18] #exclude q0 from quaternions
+    qpol = q_new[1:4]+q_new[5:8]+q_new[9:12]+q_new[13:16]+q_new[16:18] #exclude q0 from quaternions, polynomials are build from vector part only (Zoufaly et al., 2025)
     nmus = len(model_struct['model']['muscles'][0,0][0])
 
+    # calculate derivative of quaternions using angular velocities and quaternions.
     dquatdSC = dquatdt(q_new[4:8],u[0:3])
     dquatdAC = dquatdt(q_new[8:12],u[3:6])
     dquatdGH = dquatdt(q_new[12:16],u[6:9])
     dqdtEL = u[9]
     
+    # symbolically define activations, these will be later substituted by dynamicsymbols for optimization.
     actSym = sp.symbols('actSym_1:' + str(nmus + 1))
     
     if derive == 'symbolic':
@@ -369,7 +361,6 @@ def polynomials_quat(model_struct,q,u,derive,RC_lim, calibrated_params = None):
         
         for i in range(nmus):
             muscle = model_struct['model']['muscles'].item()[0,i]
-            
             
             lslack.append(muscle['lslack'][0,0].item())
             vmax.append(muscle['vmax'][0,0].item())
@@ -409,10 +400,12 @@ def polynomials_quat(model_struct,q,u,derive,RC_lim, calibrated_params = None):
 
             if 'supra' in mus_name or 'infra' in mus_name:
                 fmax[i] = fmax[i] * RC_lim
-                    
+
+    # preallocate muscle length, force, and Jacobian arrays
     mus_lengths_full = sp.zeros(nmus,1)
     mus_forces = sp.zeros(nmus,1)
     JacInSpat_full = sp.zeros(11,nmus)
+    # preallocate GH force vector components
     xforce = 0
     yforce = 0
     zforce = 0
@@ -435,7 +428,8 @@ def polynomials_quat(model_struct,q,u,derive,RC_lim, calibrated_params = None):
             Jac = -sp.Matrix([L]).jacobian(q_new).T
             vce = -sp.Matrix(Jac[4:-1]).T * sp.Matrix([dquatdSC,dquatdAC,dquatdGH,dqdtEL])
 
-            # Map the jacobian from the quaternion representation to spatial coordinates using the G matrix for each joint segment            
+            # Map the jacobian from the quaternion representation to spatial coordinates using the G matrix for each joint segment
+            # Elbow is a revolute joint, so no mapping is needed         
             TEsc = 1/2 * G(q_new[4:8])*sp.Matrix(Jac[4:8])
             TEac = 1/2 * G(q_new[8:12])*sp.Matrix(Jac[8:12])
             TEgh = 1/2 * G(q_new[12:16])*sp.Matrix(Jac[12:16])
@@ -443,8 +437,6 @@ def polynomials_quat(model_struct,q,u,derive,RC_lim, calibrated_params = None):
             
             iJacInSpat = sp.Matrix(TEsc).col_join(TEac).col_join(TEgh).col_join(TEel)
             JacInSpat_full[:,imus] = iJacInSpat
-
-            # print('analytic')
             
         elif isWrapped == 1:
             
@@ -550,7 +542,6 @@ def polynomials_quat(model_struct,q,u,derive,RC_lim, calibrated_params = None):
     GH_mus_forces = sp.Matrix([xforce, yforce, zforce])
     GH_mus_forces = GH_mus_forces.subs(q_new[17],120*np.pi/180)
     
-    
     symbols_list = TE.free_symbols
     t = sp.Symbol('t')
     actSym_list = [i for i in symbols_list if str(i).startswith('actSym')]
@@ -584,7 +575,7 @@ def polynomials_quat(model_struct,q,u,derive,RC_lim, calibrated_params = None):
 
 def polynomials_euler(model_struct,q,u,derive, motion_folder = None, gen_matlab_functions = None):
 
-    # Polynomials for Euler angle version of the model is applied with the same logic as the quaternion version.
+    """ Polynomials for Euler angle version of the model is applied with the same logic as the quaternion version. """
 
     q_thorax1 = me.dynamicsymbols('q_thorax1')
     q_thorax2 = me.dynamicsymbols('q_thorax2')
@@ -706,26 +697,17 @@ def polynomials_euler(model_struct,q,u,derive, motion_folder = None, gen_matlab_
 def muscle_force(act, lmt, vce, fmax, lceopt, lslack, vmax):
     """Compute muscle force using a Hill-type muscle model.
 
-    The resulting normalized force is scaled by ``fmax``:
         force = (flce * act * fvce + fpe) * fmax
 
     Parameters
     ----------
-    act : sympy expression
-        Activation symbol.
-    lmt : sympy expression
-        Symbolic muscle-tendon length.
-    vce : sympy Matrix
-        Symbolic contractile element velocity.
-    fmax : sympy expression or float
-        Maximum isometric muscle force.
-    lceopt : sympy expression or float
-        Optimal contractile element (muscle fiber) length.
-    lslack : sympy expression or float
-        Tendon slack length.
-    vmax : sympy expression or float
-        Maximum normalized shortening velocity coefficient. The absolute
-        velocity scale is ``vmax * lceopt``.
+    act : Activation symbol.
+    lmt : Muscle-tendon length - symbolic expression from polynomial approximation.
+    vce : Contractile element velocity.
+    fmax : Maximum isometric muscle force.
+    lceopt : Optimal contractile element (muscle fiber) length.
+    lslack : Tendon slack length.
+    vmax : Maximum normalized shortening velocity coefficient.
 
     Returns
     -------
@@ -759,19 +741,14 @@ def act_dynamics(a,u,t_act = 0.015,t_deact = 0.05):
 
     Parameters
     ----------
-    a : sympy.physics.mechanics.dynamicsymbols
-        Current muscle activation state.
-    u : sympy.physics.mechanics.dynamicsymbols
-        Neural excitation input.
-    t_act : float, optional
-        Activation time constant in seconds (default 0.015).
-    t_deact : float, optional
-        Deactivation time constant in seconds (default 0.05).
+    a : Current muscle activation state.
+    u : Neural excitation input.
+    t_act : Activation time constant in seconds (default 0.015).
+    t_deact : Deactivation time constant in seconds (default 0.05).
 
     Returns
     -------
-    sympy.Expr
-        Time derivative of activation da/dt as a symbolic expression.
+    Time derivative of activation da/dt as a symbolic expression.
     """
 
     da = (u/t_act + (1-u)/t_deact)*(u-a)
@@ -783,17 +760,14 @@ def conoid_force(lmt, lopt, k, eps):
 
     Parameters
     ----------
-    lmt : sympy expression
-        Symbolic ligament length.
-    lopt : sympy expression or float
-        Slack/reference ligament length.
-    k : sympy expression or float
-        Ligament stiffness.
-    eps : sympy expression or float
-        Smoothing constant at the zero-force transition.
+    lmt : Symbolic ligament length.
+    lopt : Slack/reference ligament length.
+    k : Ligament stiffness.
+    eps : Smoothing constant at the zero-force transition.
 
-    Returns:
-        sympy.Expr: Ligament tensile force expression.
+    Returns
+    -------
+        Ligament tensile force expression.
     """
 
     d = lmt-lopt
@@ -806,13 +780,11 @@ def dquatdt(quat,w):
 
     Parameters
     ----------
-        quat : sympy.Matrix
-            Quaternion components as SymPy dynamicsymbols [q0, q1, q2, q3].
-        w : sympy.Matrix
-        Angular velocity components as SymPy dynamicsymbols [wx, wy, wz].
+        quat : Quaternion components as [q0, q1, q2, q3].
+        w : Angular velocity components as [wx, wy, wz].
 
     Returns:
-        sympy.Matrix: Quaternion time derivative dq/dt.
+        Quaternion time derivative dq/dt.
     """
     res = 1/2 * G(quat).T * sp.Matrix([w]).T
     return res
@@ -821,6 +793,7 @@ def invQuat_sp(q):
     """Return the quaternion inverse (conjugate for unit quaternions)."""
 
     return sp.Matrix([q[0],-q[1],-q[2],-q[3]])
+
 
 def invEtrans(quat):
     q1 = quat[0];
@@ -881,8 +854,51 @@ def YZX_seq(phi_vec):
     
     return res
 
-def analytic_length_eul(origin, insertion, O_pos, I_pos, q, model):
+def analytic_length_quat(origin, insertion, O_pos, I_pos, q, model):
+    
+    """Symbolic length of a non-wrapped muscle using quaternion rotations.
 
+    Parameters
+    ----------
+    origin : Origin body name in the OpenSim model.
+    insertion : Insertion body name in the OpenSim model.
+    O_pos : Origin value point position.
+    I_pos : Insertion value point position.
+    q : Quaternion coordinates used for the body rotations.
+    model : OpenSim model structure.
+
+    Returns
+    -------
+    Muscle-tendon length.
+    """
+
+    jnts = model['model']['joints'].item()
+    offset_thorax = jnts[0,1]['location'].item()[0]
+    offset_clavicle = jnts[0,4]['location'].item()[0]
+
+    if origin == 'thorax' and insertion == 'clavicle_r':
+        O = position(O_pos)
+        I = T_trans(offset_thorax) * Qrm(q[0:4]) * position(I_pos)
+        
+    elif origin == 'thorax' and insertion == 'scapula_r':
+        O = position(O_pos)
+        RW_C = T_trans(offset_thorax) * Qrm(q[0:4])
+        TC_S = T_trans(offset_clavicle)
+        RC_S = Qrm(q[4:8])
+        I = RW_C * TC_S * RC_S * position(I_pos)
+        
+    elif origin == 'clavicle_r' and insertion == 'scapula_r':
+        O = position(O_pos)
+        TC_S = T_trans(offset_clavicle)
+        RC_S = Qrm(q[4:8])
+        I = TC_S * RC_S * position(I_pos)
+
+    muscle_length = sp.sqrt((O[0] - I[0])**2 + (O[1] - I[1])**2 + (O[2] - I[2])**2)
+    
+    return muscle_length
+
+def analytic_length_eul(origin, insertion, O_pos, I_pos, q, model):
+    """This follows the same logic as analytic_length_quat but uses Euler angles."""
 
     jnts = model['model']['joints'].item()
     offset_thorax = jnts[0,1]['location'].item()[0]
@@ -906,55 +922,6 @@ def analytic_length_eul(origin, insertion, O_pos, I_pos, q, model):
         I = TC_S * RC_S * position(I_pos);
 
     muscle_length = sp.sqrt((O[0] - I[0])**2 + (O[1] - I[1])**2 + (O[2] - I[2])**2);
-    
-    return muscle_length
-
-def analytic_length_quat(origin, insertion, O_pos, I_pos, q, model):
-    
-    """Symbolic length of a non-wrapped muscle using quaternion rotations.
-
-    Parameters
-    ----------
-    origin : str
-        Origin body name in the OpenSim model.
-    insertion : str
-        Insertion body name in the OpenSim model.
-    O_pos : sympy expression
-        Symbolic origin point position.
-    I_pos : sympy expression
-        Symbolic insertion point position.
-    q : list
-        Quaternion coordinates used for the body rotations.
-    model : dict
-        OpenSim model structure.
-
-    Returns
-    -------
-    sympy.Expr
-        Muscle-tendon length.
-    """
-    jnts = model['model']['joints'].item()
-    offset_thorax = jnts[0,1]['location'].item()[0]
-    offset_clavicle = jnts[0,4]['location'].item()[0]
-
-    if origin == 'thorax' and insertion == 'clavicle_r':
-        O = position(O_pos)
-        I = T_trans(offset_thorax) * Qrm(q[0:4]) * position(I_pos)
-        
-    elif origin == 'thorax' and insertion == 'scapula_r':
-        O = position(O_pos)
-        RW_C = T_trans(offset_thorax) * Qrm(q[0:4])
-        TC_S = T_trans(offset_clavicle)
-        RC_S = Qrm(q[4:8])
-        I = RW_C * TC_S * RC_S * position(I_pos)
-        
-    elif origin == 'clavicle_r' and insertion == 'scapula_r':
-        O = position(O_pos)
-        TC_S = T_trans(offset_clavicle)
-        RC_S = Qrm(q[4:8])
-        I = TC_S * RC_S * position(I_pos)
-
-    muscle_length = sp.sqrt((O[0] - I[0])**2 + (O[1] - I[1])**2 + (O[2] - I[2])**2)
     
     return muscle_length
 
@@ -984,7 +951,7 @@ def Qrm(q):
 
 def joint_spring_quat(q,Qeq,kpe = 2.0, epsm0 = 0.6):
     joint_stiffness = 1.0
-    Qdif = mulQuat_sp(Qinv_sp(Qeq),q)
+    Qdif = mulQuat_sp(invQuat_sp(Qeq),q)
 
     angle = 2*sp.atan2(sp.sqrt(Qdif[1]**2 + Qdif[2]**2 + Qdif[3]**2),Qdif[0])
     scale = 1/sp.sqrt(1-Qdif[0]**2 + 1e-2)
@@ -995,10 +962,7 @@ def joint_spring_quat(q,Qeq,kpe = 2.0, epsm0 = 0.6):
     return res
 
 
-def Qinv_sp(q):
-    res = sp.Matrix([q[0],-q[1],-q[2],-q[3]])
 
-    return res
 
 
 def mulQuat_sp(qa,qb):
@@ -1006,15 +970,12 @@ def mulQuat_sp(qa,qb):
 
     Parameters
     ----------
-    qa : list or sympy.Matrix
-        First quaternion [q0, q1, q2, q3].
-    qb : list or sympy.Matrix
-        Second quaternion [q0, q1, q2, q3].
+    qa : First quaternion [q0, q1, q2, q3].
+    qb : Second quaternion [q0, q1, q2, q3].
 
     Returns
     -------
-    sympy.Matrix
-        Quaternion product qa * qb.
+    Quaternion product qa * qb.
     """
 
     res = sp.Matrix([[qa[0]*qb[0] - qa[1]*qb[1] - qa[2]*qb[2] - qa[3]*qb[3]],
@@ -1023,9 +984,27 @@ def mulQuat_sp(qa,qb):
                      [qa[0]*qb[3] + qa[1]*qb[2] - qa[2]*qb[1] + qa[3]*qb[0]]])
     return res
 
-def create_eoms_quat_w_RF(OS_struct,weight = 0, derive = 'symbolic',gen_matlab_functions = None):
+
+
+def create_eoms_quat_w_RF(OS_struct,hand_weight = 0, derive = 'symbolic',gen_matlab_functions = None):
     
-    # symbols
+    """Create equations of motion with reaction forces in GH joint.
+
+    Parameters
+    ----------
+    OS_struct : OpenSim model structure.
+    hand_weight : Weight in hand segment to include in the model (default 0).
+    derive : 'symbolic' or 'numeric' to specify whether to use symbolic parameters or numeric values from the OpenSim model.
+
+    Returns
+    -------
+    q : list of sympy dynamic symbols for generalized coordinates.
+    w : list of sympy dynamic symbols for angular velocities.
+    faux : list of sympy dynamic symbols for GH reaction forces (in scapular frame).
+    fr,frstar : fr + frstar = 0 are implicitly defined Equations of motion. The last 3 elements correspond to implcitly defined reaction forces in the GH joint.
+    kinematical : list of kinematic equations relating quaternion derivatives to angular velocities.
+    """
+
     t = sp.symbols('t')
 
     states = ['q','w','u0']
@@ -1089,7 +1068,8 @@ def create_eoms_quat_w_RF(OS_struct,weight = 0, derive = 'symbolic',gen_matlab_f
         frame.append(me.ReferenceFrame('frame_' + str(seg)))
         point_offset.append(me.Point('point_offset_' + str(seg)))
         masscenter.append(me.Point('masscenter_' + str(seg)))
-    mass[-1] += weight
+    mass[-1] += hand_weight
+
     # inertial frame and point
     frame_ground = me.ReferenceFrame('frame_ground')
     point_ground = me.Point('point_ground')
@@ -1133,9 +1113,10 @@ def create_eoms_quat_w_RF(OS_struct,weight = 0, derive = 'symbolic',gen_matlab_f
     # set gravity force and damping of first body
     FG = [(masscenter[0], -mass[0] * g * frame_ground.y)]
     DAMP = [(frame[0], -c[0]*(w[0]*frame[0].x+w[1]*frame[0].y+w[2]*frame[0].z))]
-    # spring = []
+
+    # axis-angle springs have the equilibrium position defined in OpenSim, recalculated to quaternions
     SC_spring_torque = joint_spring_quat(q[0:4],sp.Matrix([0.981546017184242,-0.005342836650565,-0.186060194671936,0.043823215364912]))
-    spring = [(frame[0], (SC_spring_torque[0]*frame[0].x + SC_spring_torque[1]*frame[0].y + SC_spring_torque[2]*frame[0].z) * 1.0)]
+    spring = [(frame[0], (SC_spring_torque[0]*frame[0].x + SC_spring_torque[1]*frame[0].y + SC_spring_torque[2]*frame[0].z))]
     # spring = []
              
     # iterate over segments 2:end (first body is already done)
@@ -1171,7 +1152,8 @@ def create_eoms_quat_w_RF(OS_struct,weight = 0, derive = 'symbolic',gen_matlab_f
             point_offset[i].set_pos(point_offset[i-1],offset[0+i*3]*frame[i].x + offset[1+i*3]*frame[i].y + offset[2+i*3]*frame[i].z)
             point_offset[i].v2pt_theory(point_offset[i-1],frame_ground,frame[i])
 
-            AC_spring_torque = 1.0 * joint_spring_quat(q[4:8],sp.Matrix([0.894427818265390,0.034323247153231,0.443000552929629,0.050708014375610]))
+            # 
+            AC_spring_torque = joint_spring_quat(q[4:8],sp.Matrix([0.894427818265390,0.034323247153231,0.443000552929629,0.050708014375610]))
             spring.append((frame[i], AC_spring_torque[0]*frame[i].x + AC_spring_torque[1]*frame[i].y + AC_spring_torque[2]*frame[i].z))
             spring.append((frame[i-1], -AC_spring_torque[0]*frame[i].x - AC_spring_torque[1]*frame[i].y - AC_spring_torque[2]*frame[i].z))
 
@@ -1335,7 +1317,9 @@ def create_eoms_quat_w_RF(OS_struct,weight = 0, derive = 'symbolic',gen_matlab_f
     
     return q,w,faux,fr,frstar,kinematical
 
+
 def create_eoms_quat_no_RF(OS_struct,weight = 0, derive = 'symbolic',gen_matlab_functions = None):
+    """Create equations of motion without reaction forces in GH joint. It follows the same logic as create_eoms_quat_w_RF but without the reaction forces in the GH joint."""
     
     # symbols
     t = sp.symbols('t')
@@ -1402,7 +1386,7 @@ def create_eoms_quat_no_RF(OS_struct,weight = 0, derive = 'symbolic',gen_matlab_
         point_offset.append(me.Point('point_offset_' + str(seg)))
         masscenter.append(me.Point('masscenter_' + str(seg)))
     mass[-1] += weight
-    print(mass)
+    
     # inertial frame and point
     frame_ground = me.ReferenceFrame('frame_ground')
     point_ground = me.Point('point_ground')
