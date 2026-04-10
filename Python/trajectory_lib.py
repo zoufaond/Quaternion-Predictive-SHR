@@ -397,11 +397,6 @@ def Qrm_sp(q):
 
     return res
 
-def YZY_seq(phi1,phi2,phi3):
-    res = R_y(phi1) * R_z(phi2) * R_y(phi3)
-
-    return res
-
 def T_x(x):
     trans_x = sp.Matrix([[1,0,0,x],
                          [0,1,0,0],

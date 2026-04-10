@@ -1,41 +1,62 @@
+%% Run this first
 addpath Matlab_functions/
+
+%% Plot the computational performance and display the RMS errors
+computational_performance_eul_vs_quat
+computational_performance_RMS_angles
 %%  Plot the activations of two elements affected by gimbal lock. 
-OS_model = ['Motions/',participant,'/OS_model.mat'];
+% This generates Fig. 3.
 participant = 'par2';
-motion_name = 'Elevation_yzy';
+OS_model = ['Motions/',participant,'/OS_model.mat'];
+motion_name = 'Elevation';
 res_q1 = {['res_euler_',motion_name,'_50'],'euler',motion_name,'YZY',participant,'Euler angles'};
 res_q2 = {['res_quat_',motion_name,'_200'],'quat',motion_name,'YZY',participant,'Quaternions'};
 plot_IEEE_activations(OS_model,["pect_maj_c_2","delt_scap_6"],0,res_q1,res_q2)
 
-%%
+%% This generates fig.5,6 and 7
+%  - healthy SHR prediction (res_SHR_0) - this simulation is computed from
+%  healthy_SHR_prediction_example.ipynb file
+% - res_SHR_5 is taken from the sensitivity analysis study and correspond
+% to the GH_weight of 10
+
 participant = 'par2';
-motion_name = 'All_motions';
+motion_name = 'All_elevations';
+OS_struct = load(['Motions/',participant,'/',motion_name,'/',motion_name,'.mat']);
 res_q1 = {['res_SHR_0'],'quat',motion_name,'YZY',participant,'Healthy'};
 res_q2 = {['res_SHR_5'],'quat',motion_name,'YZY',participant,'RC-limited'};
+plot_IEEE_kinematics(OS_struct,res_q1,res_q2)
+plotGHStabilityAnglesIEEE(res_q1,res_q2)
+plot_EMG_healthy_RClim_IEEE(['Motions\',participant,'\',motion_name,'\EMG_',participant,'_',motion_name,'.mat'], OS_model,'one',1,res_q1,res_q2)
 
+%% This generates sensitivity analysis figures (Supplementary)
+plotGHStabilityAnglesIEEE_sanalysis()
+plot_IEEE_kinematics_sanalysis(OS_struct)
+%% This generates fig.4
+ % - res_"motion"_0 is the simulation with non-calibrated muscle parameters
+ % - res_"motion"_1 is the simulation with calibrated muscle parameters
+participant = 'par2';
 plot_GH_seq = 'YZY';
-% mus_group = ["delt_scap_5","delt_scap_6","delt_scap_7","delt_scap_8","subscap_5"];
-mus_group = ["delt"];
-OS_struct = load(['Motions/',participant,'/',motion_name,'/',motion_name,'.mat']);
+motion_name = 'shelf_reaching';
 OS_model = ['Motions/',participant,'/OS_model.mat'];
+OS_struct = load(['Motions/',participant,'/',motion_name,'/',motion_name,'.mat']);
+res_q1 = {['res_',motion_name,'_0'],'quat',motion_name,'YZY',participant,'Quat'};
+res_q2 = {['res_',motion_name,'_1'],'quat',motion_name,'YZY',participant,'Eul'};
+plot_EMG_optim_IEEE(['Motions\',participant,'\',motion_name,'\EMG_',participant,'_',motion_name,'.mat'], OS_model,'one',1,res_q1,res_q2)
+
+%% Print the RMSE between
+calibration_activation_RMSE
+
+
+%%
+
 % plot_paper_kinematics(OS_struct,OS_model, plot_GH_seq,0,res_q1,res_q2)
 % plot_activations_EMG(['Motions\',participant,'\',motion_name,'\EMG_',participant,'_',motion_name,'.mat'], OS_model,'one',1,res_q1)
 % plot_paper_activations(OS_model,mus_group,1,res_q1,res_q2)
-% plot_conoid_length(OS_model,res_q2)
+% plot_conoid_length(OS_model,res_q1)
 % plot_polynomials(OS_model,mus_group,1.0,res_q1)
 % plot_GH_reactions(res_q2)
-% examine_fvectors(res_q2,OS_model)
-% plot_EMG_optim_IEEE(['Motions\',participant,'\',motion_name,'\EMG_',participant,'_',motion_name,'.mat'], OS_model,'one',1,res_q1,res_q2)
-% plot_EMG_healthy_RClim_IEEE(['Motions\',participant,'\',motion_name,'\EMG_',participant,'_',motion_name,'_fig.mat'], OS_model,'one',1,res_q1,res_q2)
 
-plot_IEEE_kinematics(OS_struct,res_q1,res_q2)
-% plotGHStabilityAnglesIEEE(res_q1,res_q2)
-% plotGHStabilityAnglesIEEE_sanalysis()
-% plot_IEEE_kinematics_sanalysis(OS_struct)
-% plot_activation_snalaysis()
-% activation_RMSE
-% computational_performance_eul_vs_quat
-% computational_performance_RMS_angles
+
 
 function plot_IEEE_activations(OS_model,mus_group,plot_excitation,varargin)
     alphabet = {'a','b'};
@@ -234,7 +255,7 @@ tiledlayout(3,3,'TileSpacing','compact','Padding','compact');
 for i = 1:9
 nexttile; hold on; box on;
 for iweight = 1:length(weights)
-RClim_struct   = load(['Motions\3NA\All_motions\',weights{iweight},'.mat']);
+RClim_struct   = load(['Motions\par2\All_elevations\',weights{iweight},'.mat']);
 
 t            = RClim_struct.data.tout;
 
@@ -357,7 +378,7 @@ figure('Color','w');
 tiledlayout(2,length(weights),'TileSpacing','compact','Padding','compact');
 
 for iweight = 1:length(weights)
-res   = load(['Motions\3NA\All_motions\',weights{iweight},'.mat']);
+res   = load(['Motions\par2\All_elevations\',weights{iweight},'.mat']);
 
 Rx_r = res.data.reactions(:,1);
 Ry_r = res.data.reactions(:,2);
@@ -421,7 +442,7 @@ nexttile([1 length(weights)]);
 hold on; box off;
 legend_names = {};
 for iweight = 1:length(weights)
-res   = load(['Motions\3NA\All_motions\',weights{iweight},'.mat']);
+res   = load(['Motions\par2\All_elevations\',weights{iweight},'.mat']);
 
 Rx_r = res.data.reactions(:,1);
 Ry_r = res.data.reactions(:,2);
@@ -461,22 +482,16 @@ cb.Label.String = 'Time (s)';
 cb.FontSize = 9;
 
 % set(gcf, 'Units', 'inches', ' Position', [1 1 3.5 3])
-exportgraphics(gcf,'IEEE_GH_stability_sensitivity_analysis.png','Resolution',600);
+% exportgraphics(gcf,'IEEE_GH_stability_sensitivity_analysis.png','Resolution',600);
 
 
 end
 
 function computational_performance_RMS_angles()
-motions = {'Elevation_yzy', 'Scabduction_yzy', 'Flexion_yzy'};
-participants = {'1LU','3NA','8tata'};
+motions = {'Elevation', 'Scabduction', 'Flexion'};
+participants = {'par1','par2','par3'};
 rot_type = {'euler','quat'};
 rot_type_weights = {'50','200'};
-itersE = [];
-itersE_GL = [];
-itersQ = [];
-timeE = [];
-timeE_GL = [];
-timeQ = [];
 qSC_IK = [];
 qSC_eul = [];
 qSC_quat = [];
@@ -523,20 +538,20 @@ for ipar = 1:length(participants)
     end
 end
 
-rmse(rad2deg(qSC_eul),rad2deg(qSC_IK))
-rmse(rad2deg(qSC_quat),rad2deg(qSC_IK))
+fprintf('RMSE SC euler-angles: %.2f \n',rmse(rad2deg(qSC_eul),rad2deg(qSC_IK)))
+fprintf('RMSE SC quaternions: %.2f \n',rmse(rad2deg(qSC_quat),rad2deg(qSC_IK)))
 
-rmse(rad2deg(qAC_eul),rad2deg(qAC_IK))
-rmse(rad2deg(qAC_quat),rad2deg(qAC_IK))
+fprintf('RMSE AC euler-angles: %.2f \n',rmse(rad2deg(qAC_eul),rad2deg(qAC_IK)))
+fprintf('RMSE AC quaternions: %.2f \n',rmse(rad2deg(qAC_quat),rad2deg(qAC_IK)))
 
-rmse(rad2deg(qGH_eul),rad2deg(qGH_IK))
-rmse(rad2deg(qGH_quat),rad2deg(qGH_IK))
+fprintf('RMSE GH euler-angles: %.2f \n',rmse(rad2deg(qGH_eul),rad2deg(qGH_IK)))
+fprintf('RMSE GH quaternions: %.2f \n',rmse(rad2deg(qGH_quat),rad2deg(qGH_IK)))
 end
 
-function activation_RMSE()
-motions = {'shelf_reaching','lifting_2kg','driving','drinking'};
-participant = '3NA';
-OS_model = 'Motions/3NA/OS_model_prediction.mat';
+function calibration_activation_RMSE()
+motions = {'shelf_reaching','lifting_5kg','driving','drinking'};
+participant = 'par2';
+OS_model = 'Motions/par2/OS_model_prediction.mat';
 EMG_muscles = {'Infrasp','UpperTrap','Serrupper','IntermediateDelt','PosteriorDelt'};
 model_names = {["infra_3","infra_4","infra_5"],["trap_clav_1"],["serr_ant_2","serr_ant_3","serr_ant_4"],["delt_scap11","delt_scap10","delt_scap_9","delt_scap_8"],["delt_scap_3","delt_scap_4","delt_scap_5"]};
 
@@ -569,8 +584,8 @@ for imot = 1:length(motions)
 
     
      for ires = 1:length(results)
-        emg_data = load(['Motions/3NA/',motions{imot},'/EMG_',participant,'_',motions{imot},'.mat']);
-        result = load(['Motions/3NA/',motions{imot},'/res_',motions{imot},'_',results{ires},'.mat']);
+        emg_data = load(['Motions/par2/',motions{imot},'/EMG_',participant,'_',motions{imot},'.mat']);
+        result = load(['Motions/par2/',motions{imot},'/res_',motions{imot},'_',results{ires},'.mat']);
         current_index = mus_index{imus};
         activations = zeros(size(result.data.activations(:,1)));
         excitations = zeros(size(result.data.excitations(:,1)));
@@ -578,13 +593,13 @@ for imot = 1:length(motions)
             activations = activations+result.data.activations(:,current_index(ielement));
             excitations = excitations+result.data.excitations(:,current_index(ielement));
         end
-        activations = activations/length(current_index);
-        % excitations = excitations/length(current_index);
+        activations = excitations/length(current_index);
+        excitations = excitations/length(current_index);
         time = linspace(0,100,length(result.data.tout));
 
         if ires == 1
-            rsmpl_simulation = linspace(0,100,length(activations));
-            current_emg_rsmpld = zeros(length(activations),6);
+            rsmpl_simulation = linspace(0,100,length(excitations));
+            current_emg_rsmpld = zeros(length(excitations),6);
             for icase = 1:6
                 try
                     current_emg = emg_data.data.(['num_',num2str(icase)]).(EMG_muscles{imus});
@@ -594,10 +609,10 @@ for imot = 1:length(motions)
             end
 
             activation_EMG = [activation_EMG;current_emg_rsmpld'];
-            activation_healthy = [activation_healthy; activations];
+            activation_healthy = [activation_healthy; excitations];
         
         else
-            activation_RClim = [activation_RClim;activations];
+            activation_RClim = [activation_RClim;excitations];
         end
 
         
@@ -728,7 +743,7 @@ cb.FontSize = 8;
 
 
 % set(gcf, 'Units', 'inches', ' Position', [1 1 3.5 3])
-exportgraphics(gcf,'IEEE_GH_stability2.png','Resolution',600);
+% exportgraphics(gcf,'IEEE_GH_stability2.png','Resolution',600);
 
 
 end
@@ -1075,7 +1090,7 @@ lg.ItemTokenSize = 10;
 lg.FontSize = 8;
 lg.Box = 'off';
 
-exportgraphics(gcf,'IEEE_emg_healthy_RClim2.png','Resolution',600);
+% exportgraphics(gcf,'IEEE_emg_healthy_RClim2.png','Resolution',600);
 
 end
 
@@ -1229,94 +1244,9 @@ lg.FontSize = 8;
 lg.Box = 'off';
 lg.ItemTokenSize = 10;
 
-exportgraphics(gcf,'IEEE_emg_orig_adjusted.png','Resolution',600);
+% exportgraphics(gcf,'IEEE_emg_orig_adjusted.png','Resolution',600);
 
 
-end
-
-function plot_paper_kinematics_ISG(OS_struct,OS_model,plot_GH_seq,plot_quaternion,varargin)
-    num_res = length(varargin);
-    legend_names = {};
-    line_styles = {'--','-.','-'};
-    line_colors = [0, 0, 1, 1; 1, 0, 0, 1; 0.4660, 0.6740, 0.1880, 1];
-    figure
-    for ires = 1:num_res
-        iresult = varargin{ires};
-        file_name = iresult{1};
-        rot_type = iresult{2};
-        motion_name = iresult{3};
-        GH_seq = iresult{4};
-        participant = iresult{5};
-        plot_name = iresult{6};
-        result = load(['Motions\',participant,'\',motion_name,'\',file_name,'.mat']);
-        % result = load(['Motions\',participant,'/',motion_name,'\res_',rot_type,'_',motion_name,'_',weight,'.mat']);
-        time = result.data.tout;
-        Nfr = length(time);
-        startG = floor(0.38*Nfr);
-        endG = floor(0.62*Nfr);
-        time = time(startG:endG);
-        percent_of_motion = linspace(0,100,length(time));
-        traj = result.data.trajectories;
-        traj = traj(startG:endG,:);
-        dofs_names = {'R_{Y}^{clav} in W_{F}','R_{Z}^{clav} in W_{F}','R_{X}^{clav} in W_{F}','R_{Y}^{scap} in W_{F}','R_{Z}^{scap} in W_{F}','R_{X}^{scap} in W_{F}','R_{Y}^{hum} in W_{F}','R_{Z}^{hum} in W_{F}',['R_{',GH_seq(end),'Y}^{hum} in W_{F}'],'Elbow'};
-    
-        if strcmp(rot_type,'euler')
-            traj_obj_eul = rad2deg(create_objective_traj_eul(traj,GH_seq));
-            traj_obj = traj_obj_eul;
-            traj_gh = traj(:,8);
-        elseif strcmp(rot_type,'quat')
-            traj_in_eul = quat2eul_motion(traj,GH_seq);
-            traj_obj_quat = rad2deg(create_objective_traj_eul(traj_in_eul,GH_seq));
-            traj_obj = traj_obj_quat;
-            for itime = 1:length(traj(:,1))
-                nSC(itime) = norm(traj(itime,1:4));
-                nAC(itime) = norm(traj(itime,5:8));
-                nGH(itime) = norm(traj(itime,9:12));
-            end
-            traj_gh = traj_in_eul(:,8);
-            % sum(nSC-1)
-            % sum(nAC-1)
-            % sum(nGH-1)
-        end
-        
-        plot(percent_of_motion,traj_obj(:,5),'Color',line_colors(ires,:),'Linestyle',line_styles{ires},'LineWidth',3)
-        % plot(traj_obj(:,8),traj_obj(:,5),'Color',line_colors(ires,:),'Linestyle',line_styles{ires},'LineWidth',3)
-
-        legend('Healthy','RCI')
-        hold on
-        xlabel('% of motion','FontSize',15,'FontWeight','bold')
-        ylabel('Scapula - upward rotation [deg]','FontSize',15,'FontWeight','bold')
-
-        end
-
-
-    OS_interp = interp1(OS_struct.mot_struct.time,OS_struct.mot_struct.euler,time',"spline");
-    OS_interp_obj = rad2deg(create_objective_traj_eul(OS_interp,plot_GH_seq));
-    % legend_names{end+1} = 'Inverse kinematics';
-    plot(percent_of_motion, OS_interp_obj(:,5),'g','LineWidth',3); hold on
-
-
-
-    hold off
-    fig = gca;
-    % ax = axes('Parent',fig);
-    fig.FontSize = 15;
-    Lgnd = legend({'RC intact','RC impairment','Healthy participant (IK)'},'FontSize',16,'Location','south'); %
-
-    title(['Upward rotation of scapula',newline,'during humeral elevation'],'FontSize',25)
-
-    % Lgnd.Position(1) = 0.62;
-    % Lgnd.Position(2) = 0.075;
-    % Lgnd.Direction = "reverse";
-    % fig.Position(3) = fig.Position(3) - 1;
-    fig.Position(3) = fig.Position(3);
-    fig.Position(4) = fig.Position(4);
-    % Lgnd.Position = 'northwest';
-    % axes('FontSize',25)
-    % exportgraphics(fig,['Motions\',participant,'\',motion_name,'\Results\kinematics_all_',participant,'_',motion_name,'.png'],'Resolution',600);
-    % print(gcf,'-vector','-dsvg',['kinematics.svg'])
-    exportgraphics(fig,'scapula_ISG.png','Resolution',600);
-    
 end
 
 
@@ -1344,8 +1274,8 @@ end
 end
 
 function computational_performance_eul_vs_quat()
-motions = {'Elevation_yzy', 'Scabduction_yzy', 'Flexion_yzy'};
-participants = {'1LU','3NA','8tata'};
+motions = {'Elevation', 'Scabduction', 'Flexion'};
+participants = {'par1','par2','par3'};
 rot_type = {'euler','quat'};
 rot_type_weights = {'50','200'};
 itersE = [];
@@ -1388,7 +1318,7 @@ function plot_computational_performance(itersEo,itersQ,itersE_GL,...
                                         timeE,timeQ,timeE_GL)
 
 figure('Color','w','Units','inches','Position',[1 1 3.5 2.5]);
-tiledlayout(1,2,'TileSpacing','compact','Padding','compact')
+tiledlayout(1,2,'TileSpacing','compact','Padding','loose')
 
 % ===================== ITERATIONS =====================
 nexttile; hold on;
@@ -1419,11 +1349,16 @@ set(gca,'YScale','log');
 xlim([0.7 2.3])
 xticks([1 2])
 xticklabels({'Euler\newline angles','Quaternions'})
+ylim([200,2500])
+yticks([200 500 1000 2000])
+yticklabels({'200','500','1000','2000'})
 ylabel('Iterations')
 t = title('Solver Iterations');
-% t.Position(2) = t.Position(2)*1.02;
 
-set(gca,'FontSize',8,'Box','off','YMinorTick','on')
+ax = gca;
+ax.Position(2) = ax.Position(2) + 0.05;
+
+set(gca,'FontSize',8,'Box','off','YMinorTick','off')
 
 
 % ===================== TIME =====================
@@ -1449,8 +1384,9 @@ set(gca,'YScale','log');
 
 xlim([0.7 2.3])
 xticks([1 2])
-yticks([500 1000 1500 2000 3000 4000])
-yticklabels({'500','1000','1500','2000','3000','4000'})
+ylim([400 9000])
+yticks([500 1000 2000 4000 8000])
+yticklabels({'500','1000','2000','4000','8000'})
 
 
 xticklabels({'Euler\newline angles','Quaternions'})
@@ -1461,6 +1397,8 @@ legend(hGL,['Gimbal lock',newline, 'occurrence'],'Position',[0.4 0.45 0.9 0.5],'
 
 set(gca,'FontSize',8,'Box','off','YMinorTick','on')
 
+ax = gca;
+ax.Position(2) = ax.Position(2) + 0.5;
 sgtitle('Computational Performance','FontWeight','bold','FontSize',10)
 
 % exportgraphics(gcf,'comp_perf.png','Resolution',600)
@@ -1560,52 +1498,6 @@ function plot_objective_values(varargin)
     
 end
 
-function plot_GH_near_GL(varargin)
-    num_res = length(varargin);
-    iplot = 1;
-    colors_fig = {[0.4660, 0.6740, 0.1880, 1],[0, 0, 1, 1]};
-    figure
-    for ires = 1:num_res
-        iresult = varargin{ires};
-        motion_name = iresult{1};
-        rot_type = iresult{2};
-        weight = iresult{3};
-        GH_seq = iresult{4};
-        result = load(['Motions\',motion_name,'\res_',rot_type,'_',motion_name,'_',weight,'.mat']);
-        time = result.data.tout;
-        percent_of_motion = linspace(0,100,length(time));
-        traj = rad2deg(result.data.trajectories);
-        if strcmp(GH_seq,'YZY')
-            dofs_names = {'GH_{y}','GH_{z}','GH_{yy}'};
-        elseif strcmp(GH_seq,'YZX')
-            dofs_names = {'GH_{y}','GH_{z}','GH_{x}'};
-        end
-        
-        for i = 1:length(dofs_names)
-        subplot(num_res,3,iplot)
-        plot(percent_of_motion,traj(:,i+6),'Color',colors_fig{ires},'LineWidth',1.5)
-        if i ==2 && strcmp(GH_seq,'YZY')
-            yline(0,'-.','Color','Black','LineWidth',1.5)
-            text(20,7,'\downarrow Gimbal lock')
-            axis([-inf, inf, -5, inf])
-        else
-            axis([-inf, inf, -inf, inf])
-        end
-        xlabel(['% of humeral elevation'])
-        ylabel('Angle [deg]')
-        title(dofs_names{i})
-        iplot = iplot+1;
-        end
-        
-    
-    end
-    fig = gcf;
-    fig.Position(3) = fig.Position(3) + 300;
-    fig.Position(4) = fig.Position(4) - 150;
-    exportgraphics(fig,'plot_near_GH.png','Resolution',600);
-    % Lgnd.Position(1) = 0.7;
-    % Lgnd.Position(2) = 0.14;
-end
 
 function plot_paper_activations(OS_model,mus_group,plot_excitation,varargin)
     model = load(OS_model);
@@ -2043,7 +1935,7 @@ function plot_paper_kinematics(OS_struct,OS_model,plot_GH_seq,plot_quaternion,va
     Lgnd = legend({['Quaternion',newline,'model'],['Inverse',newline,'kinematics']}); %,'FontSize',15
     Lgnd.Position(1) = 0.75;
     Lgnd.Position(2) = 0.7;
-    exportgraphics(fig,'kinematics_quat_only.png','Resolution',600);
+    % exportgraphics(fig,'kinematics_quat_only.png','Resolution',600);
     % exportgraphics(fig,['Motions\',participant,'\',motion_name,'\Results\kinematics_quat_',participant,'_',motion_name,'.png'],'Resolution',600);
 
     end

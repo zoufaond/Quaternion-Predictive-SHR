@@ -11,6 +11,8 @@ function das3_polynomials(osimfile,mydir,motion,GH_seq,gen_polyvalues,musclepoly
 % Updated for OpenSim 4.0 by Derek Wolf, November 2019
 % 29/03/22: Update by D Blana: convert cells to tables for clearer access
 
+% Script modified to be used with quaternions
+
 % creates structure with information on the model
 addpath('..');
 model = das3_readosim(osimfile);
@@ -40,13 +42,14 @@ shoulder_dofs = {'SCy','SCz','SCx','ACy','ACz','ACx','GHy','GHz','GHyy'};
 data_motion = loadmot(motion);
 time = data_motion(:,1);
 angles = deg2rad(data_motion(:,2:end));
-
 %% for each muscle...
 if strcmp(gen_polyvalues,'gen_polyvalues')
+    % num_muscles = 1:length(model.muscles);
     first_muscles = [25:35];
     customorder = [first_muscles, setdiff(1:length(model.muscles), first_muscles)];
-    for imus = customorder
+    % for imus = 1:length(model.muscles)
     % for imus = 60:62
+    for imus = customorder
         mus = model.muscles{imus};
     
         alljntsQ = [];
@@ -71,8 +74,9 @@ if strcmp(gen_polyvalues,'gen_polyvalues')
     
         alljntsQ = [alljntsQ alljnts(:,end-1:end)]; % add revolute joints
         alljntsQA = [alljntsQA alljnts(:,end-1:end)]; % add revolute joints
-        % instead of moment arms directly from Opensim, calculate them using -dL/dq
-        % if the muscle crosses GH, also get the lines of action
+        % try
+            % instead of moment arms directly from Opensim, calculate them using -dL/dq
+            % if the muscle crosses GH, also get the lines of action
         if any(strcmp('GHy',mus.dof_names))
             [alllengths, allmomarms,quat_J, allGHfvecs] = opensim_get_polyvalues(Mod, alljnts, alljntsQ, mus.name, imus, mus.dof_indeces, GH_seq, SimEn, groundbody, scapulabody);
             save([motion_path,'\',mydir '\path_' mus.name],'alljnts','alllengths','alljntsQ','alljntsQA','allmomarms','quat_J');        
@@ -85,20 +89,11 @@ if strcmp(gen_polyvalues,'gen_polyvalues')
             % continue
         end
     
-            % make_mot_file([motion_path,'\',mydir '\angles_' mus.name '.mot'],alljnts,dof_names);
-            % disp(['Opensim motion file for muscle ', mus.name, ' created.']);
-    
-    
-        % catch err
-        %     disp(err);
-        %     return;
-        % end
-    
         clear mus alljnts alllengths allmomarms jnt_values all_dof_names
     end
 end
 %% generate polynomial approximations of lengths
-% if nargin>5, musclepath_poly(muscles,mydir,motion_path,musclepolyfile); end
+if nargin>5, musclepath_poly(muscles,mydir,motion_path,musclepolyfile); end
 
 %% generate polynomial approximations of GH lines of action
 % if nargin>5, GH_poly(muscles,mydir,musclepolyfile); end
@@ -433,7 +428,6 @@ end
 
 %% main loop for each muscle element
 for imus = 1:length(muscles)
-% for imus = 60:62
     
     % get moment arms and lengths out of the .mat files
     musfilename = [motion_path,'\',mydir,'\path_',muscles{imus}.name,'.mat'];
@@ -442,6 +436,11 @@ for imus = 1:length(muscles)
     mus = muscles{1,imus};
     ndofs = length(mus.dof_indeces); % number of dofs spanned by this muscle
     order = 3; % polynomial order
+    if contains(mus.name, 'serr') || contains(mus.name, 'pect')
+        RMS_change_tol = 0.015;
+    else
+        RMS_change_tol = 0.03;
+    end
 
     if EULorQ == 1
         jnts = ma.alljnts;
@@ -459,9 +458,7 @@ for imus = 1:length(muscles)
     fprintf(1,'Number of DOFs:   %d\n',ndofs);
     fprintf(1,'Polynomial order: %d\n',order);
     fprintf(1,'Potential number of polynomial terms: %d\n',npar);
-    tot_data = num_data*(ndofs+1);	% total number of data points
-    A = zeros(tot_data, npar);      % allocate memory space for A
-    b = zeros(tot_data, 1);         % allocate memory space for b
+    
 
     % get angle values for the dofs the muscle crosses
     musdof_indeces = zeros(ndofs,1);
@@ -470,18 +467,44 @@ for imus = 1:length(muscles)
         musdof_indeces(idof) = imusdof;
     end
     ang = (jnts(:,musdof_indeces) + 1e-6);	% protect against angle = 0.0
+    alllengths = ma.alllengths;
+
+    rowMax = max(abs(jacobs),[],2);
+    m = median(rowMax);
+    mad_val = mad(rowMax, 1);  % median absolute deviation
+    k = 4; % threshold factor (tune as needed)
+    rowsToKeep = rowMax < (m + k * mad_val);
+    jacobs = jacobs(rowsToKeep, :);
+    ang = ang(rowsToKeep, :);
+    alllengths = alllengths(rowsToKeep, :);
+
+    rowMax = max(abs(alllengths),[],2);
+    m = median(rowMax);
+    mad_val = mad(rowMax, 1);  % median absolute deviation
+    k = 4; % threshold factor (tune as needed)
+    rowsToKeep = rowMax < (m + k * mad_val);
+    jacobs = jacobs(rowsToKeep, :);
+    ang = ang(rowsToKeep, :);
+    alllengths = alllengths(rowsToKeep, :);
+    num_data = size(ang,1);
+
+    tot_data = num_data*(ndofs+1);	% total number of data points
+    A = zeros(tot_data, npar);      % allocate memory space for A
+    b = zeros(tot_data, 1);         % allocate memory space for b
    
     maxmomdof = zeros(1,ndofs);
     for idof = 1:ndofs
         maxmomdof(idof) = max(abs(jacobs(:,idof)))*1000;
     end    
+
+    
     maxall = max(maxmomdof);
     % this normalises all moment arms
     ml_weight = (maxmomdof)/maxall;
     % Stopping criterion: error less than 10% of maximum moment arm (in mm) 
     % for the muscle or 2mm, whichever is greater
-    momarm_error = max(0.1*maxall,2); 
-    % momarm_error = 0.01*maxall; 
+    % momarm_error = max(0.1*maxall,2); 
+    momarm_error = 0.05*maxall; 
 
     for idof = 1:ndofs
         % read moment arm from allmomarms matrix
@@ -511,7 +534,7 @@ for imus = 1:length(muscles)
     % <num_data> more rows for muscle length
     % read length from alllengths vector
     % and angles from alljnts matrix
-    b(ndofs*num_data+1:(ndofs+1)*num_data) = ma.alllengths;
+    b(ndofs*num_data+1:(ndofs+1)*num_data) = alllengths;
 
     % generate the npar polynomial terms, and for each term, add a column to A    
     for ipar=1:npar
@@ -527,7 +550,9 @@ for imus = 1:length(muscles)
     p = A\b;		% compute coefficients of the best fitting model
     bpred = A*p;	% these are the moment arms predicted by this model
     res = bpred-b;	% residuals
+    sorted = sort(res,'descend');
     RMSfull = (sqrt(sum(res.^2)/tot_data)) * 1000;		% RMS of residuals, in mm
+    % error('err')
         
     fprintf('RMS fit error of the full model is: %f mm\n',RMSfull);
     fprintf('maximum moment arm: %f mm\n',maxall);
@@ -536,6 +561,7 @@ for imus = 1:length(muscles)
     fprintf(logfile,'  RMS fit error of the full model is: %f mm\n',RMSfull);
     fprintf(logfile,'  maximum moment arm: %f mm\n',maxall);
     fprintf(logfile,'  maximum error allowed: %f mm\n',momarm_error);
+    % error('err')
 
     % now do stepwise regression to select polynomial terms for a smaller model
     Aselected = [];
@@ -558,7 +584,7 @@ for imus = 1:length(muscles)
         [RMSmin, col] = min(RMSnew);
         % if the change in error is less than 5%, stop without adding this term
        % if ((i>1)&&((RMS - RMSmin)/RMS<0.01))
-        if ((i>1)&&((RMS - RMSmin)/RMS<0.03))
+        if ((i>1)&&((RMS - RMSmin)/RMS<RMS_change_tol))
             fprintf('Change in error: %3f. No more terms added.\n ',(RMS - RMSmin)/RMS);
             fprintf(logfile,'Change in error: %3f. No more terms added.\n ',(RMS - RMSmin)/RMS);
             break;
@@ -874,7 +900,7 @@ for imus = 1:length(muscles)
             % now determine which expanded model had the lowest RMS
             [RMSmin, col] = min(RMSnew);
             % if the change in error is less than 5%, stop without adding this term 
-            if ((ii>1)&&((RMS - RMSmin)/RMS<0.015))
+            if ((ii>1)&&((RMS - RMSmin)/RMS<0.03))
                 fprintf('Change in error: %3f. No more terms added.\n ',(RMS - RMSmin)/RMS);
                 fprintf(logfile,'Change in error: %3f. No more terms added.\n ',(RMS - RMSmin)/RMS);
                 break;

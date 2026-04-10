@@ -3,12 +3,12 @@ function [time_training_full,trajectory_training_full] = noise2data(trajectory_t
 trajectory_training_full = [];
 numdata_training = length(trajectory_training(:,1));
 
-for i=1:7:numdata_training
+for i=1:2:numdata_training
 
     NU = noise_upper;
     NL = noise_lower;
     R_hum_quat = [];
-    for iframe = 1:12:numdata_training
+    for iframe = 1:2:numdata_training
         for inoise = 1:1
             if strcmp(GH_seq,'YZY') && abs(trajectory_training(i,8)) < deg2rad(15)
                 % scaleY = (1.1-trajectory_training(i,8)/max(trajectory_training(:,8)));
@@ -42,7 +42,7 @@ for i=1:7:numdata_training
         
 
         % if excessive GH motion, continue
-        if trajectory_noised(8) > 110*pi/180 
+        if trajectory_noised(8) > 140*pi/180 
             continue
         end
 
@@ -85,7 +85,7 @@ for i=1:7:numdata_training
             continue
         end
 
-        if qGH(1) < 0.5
+        if qGH(1) < 0.3
             continue
         end
 
@@ -97,8 +97,8 @@ for i=1:7:numdata_training
         end
     end
     end
-    i
-    size(trajectory_training_full,1)
+    fprintf('Steps: %d / %d, Number of samples: %d \n', i, numdata_training, size(trajectory_training_full,1))
+    
 end
 
 time_training_full = linspace(0,1,size(trajectory_training_full,1));

@@ -22,7 +22,6 @@ def objective_state_diff(num_nodes,interval_value):
     # Lambda functions for numerical evaluation
     obj_np = sp.lambdify([node_val],obj)
     obj_jac_np = sp.lambdify([node_val],obj_jac)
-
     
     return obj_np,obj_jac_np
 
@@ -1318,7 +1317,7 @@ def create_eoms_quat_w_RF(OS_struct,hand_weight = 0, derive = 'symbolic',gen_mat
     return q,w,faux,fr,frstar,kinematical
 
 
-def create_eoms_quat_no_RF(OS_struct,weight = 0, derive = 'symbolic',gen_matlab_functions = None):
+def create_eoms_quat_no_RF(OS_struct,hand_weight = 0, derive = 'symbolic',gen_matlab_functions = None):
     """Create equations of motion without reaction forces in GH joint. It follows the same logic as create_eoms_quat_w_RF but without the reaction forces in the GH joint."""
     
     # symbols
@@ -1385,8 +1384,8 @@ def create_eoms_quat_no_RF(OS_struct,weight = 0, derive = 'symbolic',gen_matlab_
         frame.append(me.ReferenceFrame('frame_' + str(seg)))
         point_offset.append(me.Point('point_offset_' + str(seg)))
         masscenter.append(me.Point('masscenter_' + str(seg)))
-    mass[-1] += weight
-    
+    mass[-1] += hand_weight
+
     # inertial frame and point
     frame_ground = me.ReferenceFrame('frame_ground')
     point_ground = me.Point('point_ground')
@@ -1648,9 +1647,6 @@ def create_eoms_eul(OS_struct, derive = 'symbolic',gen_matlab_functions = None,G
                 com.append(sp.symbols('com_' + seg + '_' + j))
                 offset.append(sp.symbols('offset_' + seg + '_' + j))
             elif derive == 'numeric':
-                # inertia.append(data_struct['I_' + seg][0,0][0,idat])
-                # com.append(data_struct['com_' + seg][0,0][0,idat])
-                # offset.append(data_struct['offset_' + seg][0,0][0,idat])
                 com.append(OS_struct['model']['segments'][0,0][0,segment_index[i]]['mass_center'][0,0][0,idat].item())
                 inertia_diag = np.diag(OS_struct['model']['segments'][0,0][0,segment_index[i]]['inertia'][0,0])
                 inertia.append(inertia_diag[idat].item())
@@ -1673,7 +1669,6 @@ def create_eoms_eul(OS_struct, derive = 'symbolic',gen_matlab_functions = None,G
         if derive == 'symbolic':
             mass.append(sp.symbols('mass_'+seg))
         elif derive == 'numeric':
-            # mass.append(data_struct['mass_' + seg][0,0].item())
             mass.append(OS_struct['model']['segments'][0,0][0,segment_index[i]]['mass'][0,0].item()/1.4)
 
 
@@ -1753,11 +1748,6 @@ def create_eoms_eul(OS_struct, derive = 'symbolic',gen_matlab_functions = None,G
         EL_rot_axis = OS_struct['model']['joints'][0,0][0,10]['r1_axis'][0,0][0]
         PSY_rot_axis = OS_struct['model']['joints'][0,0][0,11]['r1_axis'][0,0][0]
 
-        # for i in range(3):
-        #     offset_humerus_rot.append(data_struct['offset_humerus_rot'][0,0][0,i].item())
-        #     EL_rot_axis.append(data_struct['EL_rot_axis'][0,0][0,i].item())
-        #     PSY_rot_axis.append(data_struct['PSY_rot_axis'][0,0][0,i].item())
-
     # offset frame rotated in humerus frame (frame[2])
     ulna_rot_frame.orient_axis(frame[2],frame[2].z,offset_humerus_rot[2])
 
@@ -1790,11 +1780,6 @@ def create_eoms_eul(OS_struct, derive = 'symbolic',gen_matlab_functions = None,G
     masscenter[4].set_pos(point_offset[3],com[0+4*3]*frame[4].x + com[1+4*3]*frame[4].y + com[2+4*3]*frame[4].z)
     masscenter[4].v2pt_theory(point_offset[3],frame_ground,frame[4])
     FG.append((masscenter[4], -mass[4] * g * frame_ground.y))
-    # DAMP.append(((frame[4]),-c*u[10]*(ulna_rot_frame.x*EL_rot_axis[0]+ulna_rot_frame.y*EL_rot_axis[1]
-    #                         +ulna_rot_frame.z*EL_rot_axis[2])))
-    # DAMP.append((ulna_rot_frame,c*u[9]*(ulna_rot_frame.x*EL_rot_axis[0]+ulna_rot_frame.y*EL_rot_axis[1]
-    #                             +ulna_rot_frame.z*EL_rot_axis[2])))
-    # kindeq.append(u[10]-q[10].diff(t))
 
     point_offset[4].set_pos(point_offset[3],offset[0+4*3]*frame[4].x + offset[1+4*3]*frame[4].y + offset[2+4*3]*frame[4].z)
     point_offset[4].v2pt_theory(point_offset[3],frame_ground,frame[4])
@@ -1837,8 +1822,6 @@ def create_eoms_eul(OS_struct, derive = 'symbolic',gen_matlab_functions = None,G
         contAI = OS_struct['model']['AIcontact'][0,0].item()[0][0]
         first_elips_scale = [1.0,1.0,1.0]
         second_elips_scale = [1.0,1.0,1.0]
-        print('dimensions:',elips_dim)
-        print('trans',elips_trans)
 
     # contact points 
     contact_point1 = me.Point('CP1')
@@ -1891,77 +1874,6 @@ def create_eoms_eul(OS_struct, derive = 'symbolic',gen_matlab_functions = None,G
     MM = KM.mass_matrix_full
     FO = KM.forcing_full
     xdot = (KM.q.col_join(KM.u)).diff()
-    print('equations created')
 
     return q,u,fr,frstar,kinematical
-
-
-def MatlabFunction(function,fun_name,assignto,coordinates,speeds,inputs,body_constants,segments,other_constants,muscle_constants,parameters,folder):
-    list_of_variables = [speeds,inputs, body_constants, muscle_constants, parameters]
-    list_of_variables_names = [',u',',inputs',',model',',fmax, lceopt, lslack',',parameters']
-    
-    text_file = open(f"{folder}/{fun_name}.m","w")
-    with open(f"{folder}/{fun_name}.m","w") as text_file:
-        # function .. = .. ()
-        header = f"function {assignto} = {fun_name}(t,q" #,u,act,model,opt_var)
-        
-        for i, current_list in enumerate(list_of_variables):
-            if current_list:
-                header += list_of_variables_names[i]
-        header += ")"
-        
-        print(header,file=text_file)
-        
-        # acces to  constants in model struct
-
-        for var_name, var_tuple in body_constants.items():
-            n = 0
-            k = 0
-            if not type(var_tuple) == list:
-                print(f'{var_name} = model.{var_name};',file=text_file)
-            
-            elif len(var_tuple) == len(segments): 
-                for i, elem in enumerate(var_tuple):
-                    str_res = f'{var_name}{segments[i]} = model.{var_name}{segments[i]};'
-                    print(str_res,file=text_file)
-            else:
-                for i, elem in enumerate(var_tuple):
-                    str_res = f'{elem} = model.{var_name}{segments[n]}(:,{k+1});'
-                    print(str_res,file=text_file)
-                    k += 1
-                    if (i + 1) % 3 == 0:
-                        k = 0
-                        n += 1
-                    else:
-                        pass
-                    
-        for var_name, var_list in muscle_constants.items():
-            for i, elem in enumerate(var_list):
-                str_res = f'{elem} = {var_name}({i+1});'
-                print(str_res,file=text_file)
-        
-        for var_name, var_tuple in other_constants.items():
-            if not type(var_tuple) == list:
-                print(f'{var_name} = model.{var_name};',file=text_file)
-            else:
-                for i, elem in enumerate(var_tuple):
-                    str_res = f'{elem} = model.{var_name}(:,{i+1});'
-                    print(str_res,file=text_file)
-        
-        for i, coord in enumerate(coordinates):
-            print(f"{str(coord)} = q({i+1},:);", file=text_file)
-        for i, speed in enumerate(speeds):
-            print(f"{str(speed)} = u({i+1},:);", file=text_file)
-                    
-        for i, act in enumerate(inputs):
-            print(f"{str(act)} = inputs({i+1},:);", file=text_file)
-            
-        for i, param in enumerate(parameters):
-            print(f"{param} = parameters({i+1});", file=text_file)
-
-                
-        sub_exprs, simplified_rhs = sp.cse(function)
-        for var, expr in sub_exprs:
-            print('%s = %s;' % (sp.octave_code(var),sp.octave_code(expr)),file=text_file)
-        print('%s' % sp.octave_code(sp.Matrix([simplified_rhs]), assign_to = assignto),file=text_file)
         

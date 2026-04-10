@@ -16,6 +16,8 @@ function model = das3_readosim(osimfile,musclepolyfile,GHpolyfile)
 %
 % Updated for OpenSim 4.0 by Derek Wolf, October 2019
 
+% Modified to be used with quaternions
+
 
 % import OpenSim namespace
 import org.opensim.modeling.*;
@@ -563,11 +565,11 @@ end
 % the force-displacement curve matches human cadaver measurements described in Harris et al.
 % Am J Sports Med, vol.28, 2000, pp.103-8.
 % 
-model.conoid_eps	= 1e-1;	% epsilon for conoid force-length model
-model.conoid_stiffness = 1e4;	% stiffness of conoid
-model.conoid_length = 0.014;	% length (m) of conoid ligament
-model.conoid_origin =  [0.118100000000000,-0.011400000000000,-0.010000000000000];	% coordinates of conoid origin in clavicle frame
-model.conoid_insertion = [-0.004000000000000,-0.022260000000000,-0.030240000000000];	% coordinates of conoid insertion in scapula frame
+model.conoid_eps	= 1e-3;	% epsilon for conoid force-length model
+model.conoid_stiffness = 1000;	% stiffness of conoid
+model.conoid_length = 0.017;	% length (m) of conoid ligament
+model.conoid_origin =  [model.joints{1,5}.location(1)*0.85,-0.011400000000000,-0.010000000000000];	% coordinates of conoid origin in clavicle frame
+model.conoid_insertion = model.muscles{1,83}.origin_position + [0 0.01 0.01];	% coordinates of conoid insertion in scapula frame
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % SCAPULA-THORAX CONTACT MODEL
