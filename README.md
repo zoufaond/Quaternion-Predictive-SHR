@@ -20,22 +20,21 @@ For understanding the optimization problem setup used in the paper context, star
 
 - `Python/healthy_SHR_prediction_example.ipynb`:
   - Primary notebook to understand the problem formulation and optimization setup.
-  - Demonstrates healthy SHR prediction with calibrated parameters in a compact, documented flow.
+  - Demonstrates healthy SHR prediction with calibrated parameters.
   - All data required to run this notebook is included in `Motions/par2/`.
 
 - `Python/SHR_prediction.ipynb`:
   - Runs multiple simulations with varying GH stability weights and rotator cuff limitation levels.
   - Includes healthy, RC-limited, and non-calibrated parameter scenarios.
-  - Produces `res_SHR_*` outputs.
+  - Produces `res_SHR_0` - `res_SHR_6` outputs.
 
 - `Python/muscle_params_calibration.ipynb`:
   - Calibrates grouped muscle scalers (`fmax`, `lceopt`) for selected muscle groups.
-  - Uses trajectory tracking, GH stability, smoothness, and EMG-informed objective components.
-  - Intended to produce calibrated parameter files used by downstream simulations.
+  - Uses trajectory tracking, GH stability, numerical regularization, and EMG-informed objective terms.
 
 - `Python/quat_tracking_validation.ipynb`:
   - Validates quaternion model on functional tasks (for example shelf reaching/lifting).
-  - Can compare calibrated vs non-calibrated parameter settings.
+  - Compares calibrated vs non-calibrated parameter.
 
 - `Python/quat_tracking_elevations.ipynb` and `Python/eul_tracking_elevations.ipynb`:
   - Compare formulation and behavior between quaternion and Euler tracking workflows for elevation-type motions.
@@ -46,7 +45,7 @@ For understanding the optimization problem setup used in the paper context, star
     1. Load inverse kinematics data from an OpenSim `.mot` file.
     2. Generate simulation trajectory .mat file to be tracked in optimal control (with clavicle axial rotation to correspond to minimal conoid ligament length.).
     3. Augment training data by adding noise across viable shoulder configurations, with viability checked against OpenSim wrapping geometry.
-    4. Fit muscle-tendon path polynomials and save the resulting `OS_model.mat`.
+    4. Fit muscle-tendon path polynomials and save it in the `OS_model.mat`.
 
 - `plot_results.m`:
     - Generates all figures used in the paper.
