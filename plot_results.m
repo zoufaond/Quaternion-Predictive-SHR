@@ -794,7 +794,7 @@ labels = { ...
     'Humerus plane of elevation','Humerus elevation','Humerus axial rotation'};
 
 % ---------- Figure setup ----------
-figure('Color','w','Units','inches','Position',[1 1 7.16 4.5]);
+figure('Color','w','Units','inches','Position',[1 1 7.16 4.3]);
 tiledlayout(3,3,'TileSpacing','compact','Padding','compact');
 % 
 % % ---------- Line styles ----------
@@ -832,7 +832,7 @@ for i = 1:9
 
     xlim([t(1) t(end)]);
     set(gca,'FontSize',8,'LineWidth',0.2);
-    text(0.5, -0.35, ['(',alphabet{i},')'], 'Units', 'normalized', ...
+    text(0.5, -0.55, ['(',alphabet{i},')'], 'Units', 'normalized', ...
     'VerticalAlignment', 'top', 'HorizontalAlignment', 'center', ...
     'FontName', 'Times New Roman', 'FontSize', 8);
 end
@@ -884,7 +884,7 @@ lg.Orientation = 'horizontal';
 set(gca, 'LineWidth',0.2)
 
 % set(gcf, 'Units', 'inches', 'Position', [1 1 7.16 3])
-% exportgraphics(gcf,'IEEE_kinematics_healthy_RClim2.png','Resolution',600);
+% exportgraphics(gcf,'zoufa5_new.png','Resolution',600);
     
 end
 
