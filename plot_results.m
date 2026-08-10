@@ -2,16 +2,16 @@
 addpath Matlab_functions/
 
 %% Plot the computational performance and display the RMS errors
-computational_performance_eul_vs_quat
-computational_performance_RMS_angles
-%%  Plot the activations of two elements affected by gimbal lock. 
-% This generates Fig. 3.
-participant = 'par2';
-OS_model = ['Motions/',participant,'/OS_model.mat'];
-motion_name = 'Elevation';
-res_q1 = {['res_euler_',motion_name,'_50'],'euler',motion_name,'YZY',participant,'Euler angles'};
-res_q2 = {['res_quat_',motion_name,'_200'],'quat',motion_name,'YZY',participant,'Quaternions'};
-plot_IEEE_activations(OS_model,["pect_maj_c_2","delt_scap_6"],0,res_q1,res_q2)
+% computational_performance_eul_vs_quat
+% computational_performance_RMS_angles
+% %%  Plot the activations of two elements affected by gimbal lock. 
+% % This generates Fig. 3.
+% participant = 'par2';
+% OS_model = ['Motions/',participant,'/OS_model.mat'];
+% motion_name = 'Elevation';
+% res_q1 = {['res_euler_',motion_name,'_50'],'euler',motion_name,'YZY',participant,'Euler angles'};
+% res_q2 = {['res_quat_',motion_name,'_200'],'quat',motion_name,'YZY',participant,'Quaternions'};
+% plot_IEEE_activations(OS_model,["pect_maj_c_2","delt_scap_6"],0,res_q1,res_q2)
 
 %% This generates fig.5,6 and 7
 %  - healthy SHR prediction (res_SHR_0) - this simulation is computed from
@@ -20,31 +20,32 @@ plot_IEEE_activations(OS_model,["pect_maj_c_2","delt_scap_6"],0,res_q1,res_q2)
 % to the GH_weight of 10
 
 participant = 'par2';
+OS_model = ['Motions/',participant,'/OS_model.mat'];
 motion_name = 'All_elevations';
 OS_struct = load(['Motions/',participant,'/',motion_name,'/',motion_name,'.mat']);
 res_q1 = {['res_SHR_0'],'quat',motion_name,'YZY',participant,'Healthy'};
 res_q2 = {['res_SHR_5'],'quat',motion_name,'YZY',participant,'RC-limited'};
 plot_IEEE_kinematics(OS_struct,res_q1,res_q2)
-plotGHStabilityAnglesIEEE(res_q1,res_q2)
-plot_EMG_healthy_RClim_IEEE(['Motions\',participant,'\',motion_name,'\EMG_',participant,'_',motion_name,'.mat'], OS_model,res_q1,res_q2)
+% plotGHStabilityAnglesIEEE(res_q1,res_q2)
+% plot_EMG_healthy_RClim_IEEE(['Motions\',participant,'\',motion_name,'\EMG_',participant,'_',motion_name,'.mat'], OS_model,res_q1,res_q2)
 
 %% This generates sensitivity analysis figures (Supplementary)
-plotGHStabilityAnglesIEEE_sanalysis()
-plot_IEEE_kinematics_sanalysis(OS_struct)
-%% This generates fig.4
- % - res_"motion"_0 is the simulation with non-calibrated muscle parameters
- % - res_"motion"_1 is the simulation with calibrated muscle parameters
-participant = 'par2';
-plot_GH_seq = 'YZY';
-motion_name = 'shelf_reaching';
-OS_model = ['Motions/',participant,'/OS_model.mat'];
-OS_struct = load(['Motions/',participant,'/',motion_name,'/',motion_name,'.mat']);
-res_q1 = {['res_',motion_name,'_0'],'quat',motion_name,'YZY',participant,'Quat'};
-res_q2 = {['res_',motion_name,'_1'],'quat',motion_name,'YZY',participant,'Eul'};
-plot_EMG_optim_IEEE(['Motions\',participant,'\',motion_name,'\EMG_',participant,'_',motion_name,'.mat'], OS_model,res_q1,res_q2)
-
-%% Print the RMSE between
-calibration_activation_RMSE
+% plotGHStabilityAnglesIEEE_sanalysis()
+% plot_IEEE_kinematics_sanalysis(OS_struct)
+% %% This generates fig.4
+%  % - res_"motion"_0 is the simulation with non-calibrated muscle parameters
+%  % - res_"motion"_1 is the simulation with calibrated muscle parameters
+% participant = 'par2';
+% plot_GH_seq = 'YZY';
+% motion_name = 'shelf_reaching';
+% OS_model = ['Motions/',participant,'/OS_model.mat'];
+% OS_struct = load(['Motions/',participant,'/',motion_name,'/',motion_name,'.mat']);
+% res_q1 = {['res_',motion_name,'_0'],'quat',motion_name,'YZY',participant,'Quat'};
+% res_q2 = {['res_',motion_name,'_1'],'quat',motion_name,'YZY',participant,'Eul'};
+% plot_EMG_optim_IEEE(['Motions\',participant,'\',motion_name,'\EMG_',participant,'_',motion_name,'.mat'], OS_model,res_q1,res_q2)
+% 
+% %% Print the RMSE between calibrated and generic model activation
+% calibration_activation_RMSE
 
 
 
@@ -648,7 +649,7 @@ cb.FontSize = 8;
 end
 
 function plot_IEEE_kinematics(kinematics, healthys, RClims)
-motion_name = 'All_motions';
+
 healthy_struct = load(['Motions\',healthys{5},'\',healthys{3},'\',healthys{1},'.mat']);
 RClim_struct   = load(['Motions\',RClims{5},'\',RClims{3},'\',RClims{1},'.mat']);
 t            = healthy_struct.data.tout;
@@ -662,28 +663,45 @@ kin_healthy_loc  = quat2eul_motion(healthy_struct.data.trajectories,'YZY');
 kin_healthy = create_objective_traj_eul(kin_healthy_loc,'YZY',1);
 kin_RC_loc     = quat2eul_motion(RClim_struct.data.trajectories,'YZY');
 kin_RC  = create_objective_traj_eul(kin_RC_loc,'YZY',1);
-GH_healthy = kin_healthy(:,8) - kin_healthy(:,5);
-GH_RClim = kin_RC(:,8) - kin_RC(:,5);
+GH_healthy = kin_healthy_loc(:,8);
+GH_RClim = kin_RC_loc(:,8);
 
 
 fro = [1,41];
 sca = [101,135];
 sag = [204, 236];
-[SCHR_frontal] = compute_SCHR(kin_healthy(fro(1):fro(2),8)*180/pi,kin_healthy(fro(1):fro(2),5)*180/pi,GH_healthy(fro(1):fro(2))*180/pi);
-[SCHR_scapular] = compute_SCHR(kin_healthy(sca(1):sca(2),8)*180/pi,kin_healthy(sca(1):sca(2),5)*180/pi,GH_healthy(sca(1):sca(2))*180/pi);
-[SCHR_sagittal] = compute_SCHR(kin_healthy(sag(1):sag(2),8)*180/pi,kin_healthy(sag(1):sag(2),5)*180/pi,GH_healthy(sag(1):sag(2))*180/pi);
-SCHR_frontal
-SCHR_scapular
-SCHR_sagittal
+[SCHR_frontal,info_frontal] = compute_SCHR(kin_healthy(fro(1):fro(2),8)*180/pi,kin_healthy(fro(1):fro(2),5)*180/pi,GH_healthy(fro(1):fro(2))*180/pi);
+[SCHR_scapular,info_scapular] = compute_SCHR(kin_healthy(sca(1):sca(2),8)*180/pi,kin_healthy(sca(1):sca(2),5)*180/pi,GH_healthy(sca(1):sca(2))*180/pi);
+[SCHR_sagittal,info_sagittal] = compute_SCHR(kin_healthy(sag(1):sag(2),8)*180/pi,kin_healthy(sag(1):sag(2),5)*180/pi,GH_healthy(sag(1):sag(2))*180/pi);
+% SCHR_frontal
+% SCHR_scapular
+% SCHR_sagittal
 % 
-[SCHR_frontal_RClim] = compute_SCHR(kin_RC(fro(1):fro(2),8)*180/pi,kin_RC(fro(1):fro(2),5)*180/pi,GH_RClim(fro(1):fro(2))*180/pi);
-[SCHR_scapular_RClim] = compute_SCHR(kin_RC(sca(1):sca(2),8)*180/pi,kin_RC(sca(1):sca(2),5)*180/pi,GH_RClim(sca(1):sca(2))*180/pi);
-[SCHR_sagittal_RClim] = compute_SCHR(kin_RC(sag(1):sag(2),8)*180/pi,kin_RC(sag(1):sag(2),5)*180/pi,GH_RClim(sag(1):sag(2))*180/pi);
-SCHR_frontal_RClim
-SCHR_scapular_RClim
-SCHR_sagittal_RClim
+[SCHR_frontal_RClim,info_frontal_RClim] = compute_SCHR(kin_RC(fro(1):fro(2),8)*180/pi,kin_RC(fro(1):fro(2),5)*180/pi,GH_RClim(fro(1):fro(2))*180/pi);
+[SCHR_scapular_RClim,info_scapular_RClim] = compute_SCHR(kin_RC(sca(1):sca(2),8)*180/pi,kin_RC(sca(1):sca(2),5)*180/pi,GH_RClim(sca(1):sca(2))*180/pi);
+[SCHR_sagittal_RClim,info_sagittal_RClim] = compute_SCHR(kin_RC(sag(1):sag(2),8)*180/pi,kin_RC(sag(1):sag(2),5)*180/pi,GH_RClim(sag(1):sag(2))*180/pi);
+% SCHR_frontal_RClim
+% SCHR_scapular_RClim
+% SCHR_sagittal_RClim
+print_SCHR('Frontal / Healthy', SCHR_frontal,info_frontal);
+print_SCHR('Scapular / Healthy', SCHR_scapular,info_scapular);
+print_SCHR('Sagittal / Healthy', SCHR_sagittal,info_sagittal);
 
+print_SCHR('Frontal / RC-limited', SCHR_frontal_RClim,info_frontal_RClim);
+print_SCHR('Scapular / RC-limited', SCHR_scapular_RClim,info_scapular_RClim);
+print_SCHR('Sagittal / RC-limited', SCHR_sagittal_RClim,info_sagittal_RClim);
 
+function print_SCHR(name, SCHR, info)
+fprintf('\n%s\n', name);
+fprintf('%-11s %4s %8s %6s %9s %8s %7s %7s %7s %7s\n', ...
+    'phase','n','slope','R2','endpoint','range','dTH','dTS','dGH','revTS');
+for i = 1:numel(SCHR)
+    fprintf('%4.0f-%-6.0f %4d %8.2f %6.3f %9.2f %8.2f %7.1f %7.1f %7.1f %7.2f\n', ...
+        info.phase(i,1), info.phase(i,2), info.n(i), info.slope(i), ...
+        info.R2(i), info.endpoint(i), info.range(i), ...
+        info.netTH(i), info.netTS(i), info.netGH(i), info.fracRevTS(i));
+end
+end
 
 % ---------- Labels ----------
 labels = { ...
@@ -785,53 +803,177 @@ set(gca, 'LineWidth',0.2)
     
 end
 
-function [SCHR] = compute_SCHR(TH, TS, GH)
+% function [SCHR] = compute_SCHR(TH, TS, GH)
+% 
+% TH = TH(:);
+% TS = TS(:);
+% 
+% validIdx = ~isnan(TH) & ~isnan(TS);
+% TH = TH(validIdx);
+% TS = TS(validIdx);
+% 
+% % Define phase limits
+% phases = [ ...
+%     min(TH) 30; 
+%     30 60; 
+%     60 90;
+%     min(TH) 90];
+% 
+% nPhases = size(phases,1);
+% 
+% SCHR = zeros(nPhases,1);
+% phaseData = struct();
+% 
+% for i = 1:nPhases
+% 
+%     lower = phases(i,1);
+%     upper = phases(i,2);
+% 
+%     idx = TH >= lower & TH <= upper;
+% 
+%     if sum(idx) < 2
+%         SCHR(i) = NaN;
+%         continue;
+%     end
+% 
+%     deltaGH = max(GH(idx)) - min(GH(idx));
+%     deltaTS = max(TS(idx)) - min(TS(idx));
+% 
+%     % Avoid division by zero
+%     if abs(deltaTS) < 1e-6
+%         SCHR(i) = NaN;
+%     else
+%         SCHR(i) = round(deltaGH / deltaTS,2);
+%     end
+% 
+% end
+% 
+% end
+function [SCHR, info] = compute_SCHR(TH, TS, GH, phaseEdges)
+%COMPUTE_SCHR  Phase-specific scapulohumeral rhythm from simulated kinematics.
+%
+%   SCHR = COMPUTE_SCHR(TH, TS, GH) returns a 4x1 vector of SHR values for
+%   the phases [min(TH)-30, 30-60, 60-90, min(TH)-90], estimated as the
+%   least-squares slope of GH against TS within each phase window.
+%
+%   [SCHR, INFO] = COMPUTE_SCHR(...) also returns a struct of per-phase
+%   diagnostics, including alternative estimators for comparison.
+%
+%   SCHR = COMPUTE_SCHR(TH, TS, GH, PHASEEDGES) uses custom phase limits,
+%   given as an Nx2 matrix of [lower upper] bounds on TH. NaN in the lower
+%   bound is replaced by min(TH).
+%
+%   INPUTS (all in degrees, equal length, same simulation window)
+%     TH  thoracohumeral elevation
+%     TS  thoracoscapular upward rotation
+%     GH  glenohumeral elevation, taken directly from the relative
+%         humerus-scapula rotation (NOT TH - TS)
+%
+%   INFO FIELDS (one row per phase)
+%     .slope        least-squares dGH/dTS                        [primary]
+%     .R2           coefficient of determination of that fit
+%     .endpoint     (GH(end)-GH(1)) / (TS(end)-TS(1))            [check]
+%     .range        (max-min GH) / (max-min TS)                  [legacy]
+%     .netTH/.netGH/.netTS   signed change over the phase
+%     .spanTS       max(TS)-min(TS), the conditioning of the slope
+%     .fracRevTS    fraction of samples where TS moves opposite to its net
+%                   direction (flags the scapular setting phase)
+%     .n            samples in the phase
+%     .phase        [lower upper] bounds used
+%
+%   NOTES
+%     The slope estimator is preferred over the range ratio because it uses
+%     all samples, preserves sign, and is unaffected by non-monotonic TS
+%     (e.g. transient downward rotation during scapular setting), which
+%     inflates a max-min denominator and biases SHR downward.
 
-TH = TH(:);
-TS = TS(:);
+% ---------------------------------------------------------------- inputs
+TH = TH(:); TS = TS(:); GH = GH(:);
 
-validIdx = ~isnan(TH) & ~isnan(TS);
-TH = TH(validIdx);
-TS = TS(validIdx);
+if ~isequal(numel(TH), numel(TS), numel(GH))
+    error('compute_SCHR:sizeMismatch', ...
+        'TH (%d), TS (%d) and GH (%d) must be the same length.', ...
+        numel(TH), numel(TS), numel(GH));
+end
 
-% Define phase limits
-phases = [ ...
-    min(TH) 30; 
-    30 60; 
-    60 90;
-    min(TH) 90];
+% Filter jointly so the three signals cannot become misaligned. There
+% should be no NaN if all three come from the same simulation window, so
+% warn rather than fail silently.
+bad = isnan(TH) | isnan(TS) | isnan(GH);
+if any(bad)
+    warning('compute_SCHR:nanFound', ...
+        '%d of %d samples contain NaN and were removed from all signals.', ...
+        nnz(bad), numel(bad));
+    TH = TH(~bad); TS = TS(~bad); GH = GH(~bad);
+end
 
-nPhases = size(phases,1);
+if nargin < 4 || isempty(phaseEdges)
+    phaseEdges = [NaN 30; 30 60; 60 90; NaN 90];
+end
+phaseEdges(isnan(phaseEdges(:,1)), 1) = min(TH);
 
-SCHR = zeros(nPhases,1);
-phaseData = struct();
+nPhases   = size(phaseEdges, 1);
+minSpanTS = 1e-3;   % deg; below this the slope is ill-conditioned
+minSamp   = 3;      % samples needed for a meaningful regression
 
+% --------------------------------------------------------------- outputs
+SCHR = nan(nPhases, 1);
+z    = nan(nPhases, 1);
+info = struct('phase', phaseEdges, 'n', z, 'slope', z, 'R2', z, ...
+              'endpoint', z, 'range', z, 'netTH', z, 'netTS', z, ...
+              'netGH', z, 'spanTS', z, 'fracRevTS', z);
+
+% ----------------------------------------------------------------- loop
 for i = 1:nPhases
-    
-    lower = phases(i,1);
-    upper = phases(i,2);
-    
-    idx = TH >= lower & TH <= upper;
-    
-    if sum(idx) < 2
-        SCHR(i) = NaN;
-        continue;
-    end
-    
-    deltaGH = max(GH(idx)) - min(GH(idx));
-    deltaTS = max(TS(idx)) - min(TS(idx));
-    
-    % Avoid division by zero
-    if abs(deltaTS) < 1e-6
-        SCHR(i) = NaN;
-    else
-        SCHR(i) = round(deltaGH / deltaTS,2);
+
+    idx = TH >= phaseEdges(i,1) & TH <= phaseEdges(i,2);
+    n   = nnz(idx);
+    info.n(i) = n;
+
+    if n < minSamp
+        continue
     end
 
+    ts = TS(idx);  gh = GH(idx);  th = TH(idx);
+
+    info.netTH(i)  = th(end) - th(1);
+    info.netTS(i)  = ts(end) - ts(1);
+    info.netGH(i)  = gh(end) - gh(1);
+    info.spanTS(i) = max(ts) - min(ts);
+
+    % How much of the phase moves against the net TS direction. A large
+    % value means max-min is not measuring the net rotation.
+    dts = diff(ts);
+    if info.netTS(i) ~= 0 && ~isempty(dts)
+        info.fracRevTS(i) = mean(sign(dts) == -sign(info.netTS(i)));
+    end
+
+    if info.spanTS(i) < minSpanTS
+        continue    % scapula effectively stationary: SHR undefined
+    end
+
+    % Primary estimator: least-squares slope of GH on TS.
+    A = [ts, ones(n,1)];
+    p = A \ gh;
+    info.slope(i) = p(1);
+
+    ghFit    = A * p;
+    SSres    = sum((gh - ghFit).^2);
+    SStot    = sum((gh - mean(gh)).^2);
+    info.R2(i) = 1 - SSres / max(SStot, eps);
+
+    % Secondary estimators, for the sensitivity table.
+    if abs(info.netTS(i)) > minSpanTS
+        info.endpoint(i) = info.netGH(i) / info.netTS(i);
+    end
+    info.range(i) = (max(gh) - min(gh)) / info.spanTS(i);
+
+    SCHR(i) = info.slope(i);
 end
 
-end
+SCHR = round(SCHR, 2);
 
+end
 
 function plot_EMG_healthy_RClim_IEEE(EMG_struct, OS_model, varargin)
 
