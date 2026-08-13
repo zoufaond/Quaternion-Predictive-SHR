@@ -19,14 +19,46 @@ addpath Matlab_functions/
 % - res_SHR_5 is taken from the sensitivity analysis study and correspond
 % to the GH_weight of 10
 
-participant = 'par2';
-OS_model = ['Motions/',participant,'/OS_model.mat'];
-motion_name = 'All_elevations';
-OS_struct = load(['Motions/',participant,'/',motion_name,'/',motion_name,'.mat']);
-res_q1 = {['res_SHR_0'],'quat',motion_name,'YZY',participant,'Healthy'};
-res_q2 = {['res_SHR_5'],'quat',motion_name,'YZY',participant,'RC-limited'};
-plot_IEEE_kinematics(OS_struct,res_q1,res_q2)
+% participant = 'par2';
+% OS_model = ['Motions/',participant,'/OS_model.mat'];
+% motion_name = 'All_elevations';
+% OS_struct = load(['Motions/',participant,'/',motion_name,'/',motion_name,'.mat']);
+% res_q1 = {['res_SHR_Healthy_Elevation_Scabduction_wGH0'],'quat',motion_name,'YZY',participant,'Healthy Elev-Scab wGH=0'};
+% res_q2 = {['res_SHR_Healthy_Elevation_Flexion_wGH0'],'quat',motion_name,'YZY',participant,'Healthy Elev-Flex wGH=0'};
+% res_q3 = {['res_SHR_Healthy_Scabduction_Flexion_wGH0'],'quat',motion_name,'YZY',participant,'Healthy Scab-Flex wGH=0'};
+% res_q4 = {['res_SHR_Healthy_drinking_shelf_reaching_wGH0'],'quat',motion_name,'YZY',participant,'Healthy ADLs wGH=0'};
+% plot_IEEE_kinematics(OS_struct,res_q1,res_q2,res_q3,res_q4);
+
+% participant = 'par2';
+% OS_model = ['Motions/',participant,'/OS_model.mat'];
+% motion_name = 'All_elevations';
+% OS_struct = load(['Motions/',participant,'/',motion_name,'/',motion_name,'.mat']);
+% res_q1 = {['res_SHR_Healthy_Elevation_Scabduction_wGH2'],'quat',motion_name,'YZY',participant,'Healthy Elev-Scab wGH=2'};
+% res_q2 = {['res_SHR_Healthy_Elevation_Flexion_wGH2'],'quat',motion_name,'YZY',participant,'Healthy Elev-Flex wGH=2'};
+% res_q3 = {['res_SHR_Healthy_Scabduction_Flexion_wGH2'],'quat',motion_name,'YZY',participant,'Healthy Scab-Flex wGH=2'};
+% res_q4 = {['res_SHR_Healthy_drinking_shelf_reaching_wGH2'],'quat',motion_name,'YZY',participant,'Healthy ADLs wGH=2'};
+% plot_IEEE_kinematics(OS_struct,res_q1,res_q2,res_q3,res_q4);
+% 
+% participant = 'par2';
+% OS_model = ['Motions/',participant,'/OS_model.mat'];
+% motion_name = 'All_elevations';
+% OS_struct = load(['Motions/',participant,'/',motion_name,'/',motion_name,'.mat']);
+% res_q1 = {['res_SHR_RClim0_Elevation_Scabduction_wGH10'],'quat',motion_name,'YZY',participant,'RClim0 Elev-Scab wGH=10'};
+% res_q2 = {['res_SHR_RClim0_Elevation_Flexion_wGH10'],'quat',motion_name,'YZY',participant,'RClim0 Elev-Flex wGH=10'};
+% res_q3 = {['res_SHR_RClim0_Scabduction_Flexion_wGH10'],'quat',motion_name,'YZY',participant,'RClim0 Scab-Flex wGH=10'};
+% res_q4 = {['res_SHR_RClim0_drinking_shelf_reaching_wGH10'],'quat',motion_name,'YZY',participant,'RClim0 ADLs wGH=10'};
+% plot_IEEE_kinematics(OS_struct,res_q1,res_q2,res_q3,res_q4);
+
 % plotGHStabilityAnglesIEEE(res_q1,res_q2)
+% % res_q1 = {['res_SHR_0'],'quat',motion_name,'YZY',participant,'Healthy calib wGH=2'};
+% % res_q2 = {['res_SHR_RClim050_calib_wgh2'],'quat',motion_name,'YZY',participant,'RClim calib wGH=2 RC 50%'};
+% % plot_IEEE_kinematics(OS_struct,res_q1,res_q2)
+% % plotGHStabilityAnglesIEEE(res_q1,res_q2)
+% res_q1 = {['res_SHR_0'],'quat',motion_name,'YZY',participant,'Healthy calib wGH=2'};
+% res_q2 = {['res_SHR_RClim050_calib_wgh4'],'quat',motion_name,'YZY',participant,'RClim calib wGH=4 RC 50%'};
+% plot_IEEE_kinematics(OS_struct,res_q1,res_q2)
+% plotGHStabilityAnglesIEEE(res_q1,res_q2)
+
 % plot_EMG_healthy_RClim_IEEE(['Motions\',participant,'\',motion_name,'\EMG_',participant,'_',motion_name,'.mat'], OS_model,res_q1,res_q2)
 
 %% This generates sensitivity analysis figures (Supplementary)
@@ -451,19 +483,24 @@ fprintf('RMSE GH quaternions: %.2f \n',rmse(rad2deg(qGH_quat),rad2deg(qGH_IK)))
 end
 
 function calibration_activation_RMSE()
-motions = {'shelf_reaching','lifting_5kg','driving','drinking'};
+% motions = {'shelf_reaching','lifting_5kg','driving','drinking'};
+motions = {'driving','lifting_5kg'};
+calibrations = {'0','Elevation_Scabduction','Elevation_Flexion','Scabduction_Flexion','drinking_shelf_reaching'};
 participant = 'par2';
 OS_model = 'Motions/par2/OS_model_prediction.mat';
-EMG_muscles = {'Infrasp','UpperTrap','Serrupper','IntermediateDelt','PosteriorDelt'};
-model_names = {["infra_3","infra_4","infra_5"],["trap_clav_1"],["serr_ant_2","serr_ant_3","serr_ant_4"],["delt_scap11","delt_scap10","delt_scap_9","delt_scap_8"],["delt_scap_3","delt_scap_4","delt_scap_5"]};
+EMG_muscles = {'Infrasp','UpperTrap','Serrupper','IntermediateDelt','PosteriorDelt','AnteriorDelt','MiddleTrap'};
+calib_file_names = {'infra','trapclav','serr','deltscap','deltscap','deltclav','trapscap'};
+model_names = {["infra_3","infra_4","infra_5"],["trap_clav_1"],["serr_ant_2","serr_ant_3","serr_ant_4"],["delt_scap11","delt_scap10","delt_scap_9","delt_scap_8"],["delt_scap_3","delt_scap_4","delt_scap_5"],["delt_clav_1","delt_clav_2"],["trap_scap_6","trap_scap_7","trap_scap_8"]};
 
+
+for icalib = 1:numel(calibrations)
 
 for imus = 1:length(EMG_muscles)
 
 model = load(OS_model);
 muscles = model.model.muscles;
 num_muscles = length(muscles);
-results = {'0','1'};
+results = {calibrations{icalib}};
 activation_healthy = [];
 activation_RClim = [];
 activation_EMG = [];
@@ -485,9 +522,12 @@ end
 for imot = 1:length(motions)
 
     
-     for ires = 1:length(results)
+     for ires = 1:1
         emg_data = load(['Motions/par2/',motions{imot},'/EMG_',participant,'_',motions{imot},'.mat']);
         result = load(['Motions/par2/',motions{imot},'/res_',motions{imot},'_',results{ires},'.mat']);
+        if icalib>1
+            calibration_file = load(['Motions/par2/',calibrations{icalib},'/',calibrations{icalib},'_calibrated_params.mat']);
+        end
         current_index = mus_index{imus};
         activations = zeros(size(result.data.activations(:,1)));
         excitations = zeros(size(result.data.excitations(:,1)));
@@ -522,8 +562,20 @@ for imot = 1:length(motions)
      end
 end
 
-disp(['RMSE original ',EMG_muscles{imus},' = ',num2str(rmse(activation_healthy,activation_EMG))])
-disp(['RMSE adjusted ',EMG_muscles{imus},' = ',num2str(rmse(activation_RClim,activation_EMG))])
+% if icalib == 1
+%     fprintf('RMSE original, %s = %f6.2\n',EMG_muscles{imus},(rmse(activation_healthy,activation_EMG)))
+% end
+
+if icalib>1
+    scaler_lceopt = calibration_file.calibrated_params.(['lceopt_scaler_',calib_file_names{imus}]);
+    scaler_fmax = calibration_file.calibrated_params.(['fmax_scaler_',calib_file_names{imus}]);
+    fprintf('(calib: %s), %s (slce = %0.3f, sfmax = %0.3f); RMSE = %0.3f\n',calibrations{icalib}, EMG_muscles{imus},scaler_lceopt,scaler_fmax,(rmse(activation_healthy,activation_EMG)))
+else
+    fprintf('(calib: %s), %s; RMSE = %0.3f\n',calibrations{icalib}, EMG_muscles{imus},(rmse(activation_healthy,activation_EMG)))
+
+end
+end
+
 end
 
 
@@ -648,60 +700,53 @@ cb.FontSize = 8;
 
 end
 
-function plot_IEEE_kinematics(kinematics, healthys, RClims)
+function plot_IEEE_kinematics(kinematics, varargin)
 
-healthy_struct = load(['Motions\',healthys{5},'\',healthys{3},'\',healthys{1},'.mat']);
-RClim_struct   = load(['Motions\',RClims{5},'\',RClims{3},'\',RClims{1},'.mat']);
-t            = healthy_struct.data.tout;
-
-kin_exp      = kinematics.mot_struct.euler;
-kin_exp = interp1(kinematics.mot_struct.time,kin_exp,t,"spline");
-kin_exp = create_objective_traj_eul(kin_exp,'YZY',0);
-% t = linspace(0,length(t),length(t));
-
-kin_healthy_loc  = quat2eul_motion(healthy_struct.data.trajectories,'YZY');
-kin_healthy = create_objective_traj_eul(kin_healthy_loc,'YZY',1);
-kin_RC_loc     = quat2eul_motion(RClim_struct.data.trajectories,'YZY');
-kin_RC  = create_objective_traj_eul(kin_RC_loc,'YZY',1);
-GH_healthy = kin_healthy_loc(:,8);
-GH_RClim = kin_RC_loc(:,8);
-
-
-fro = [1,41];
-sca = [101,135];
-sag = [204, 236];
-[SCHR_frontal,info_frontal] = compute_SCHR(kin_healthy(fro(1):fro(2),8)*180/pi,kin_healthy(fro(1):fro(2),5)*180/pi,GH_healthy(fro(1):fro(2))*180/pi);
-[SCHR_scapular,info_scapular] = compute_SCHR(kin_healthy(sca(1):sca(2),8)*180/pi,kin_healthy(sca(1):sca(2),5)*180/pi,GH_healthy(sca(1):sca(2))*180/pi);
-[SCHR_sagittal,info_sagittal] = compute_SCHR(kin_healthy(sag(1):sag(2),8)*180/pi,kin_healthy(sag(1):sag(2),5)*180/pi,GH_healthy(sag(1):sag(2))*180/pi);
-% SCHR_frontal
+% for isim = 1:length(varargin)
+% healthys = varargin{isim};
+% healthy_struct = load(['Motions\',healthys{5},'\',healthys{3},'\',healthys{1},'.mat']);
+% % RClim_struct   = load(['Motions\',RClims{5},'\',RClims{3},'\',RClims{1},'.mat']);
+% % healthy_struct
+% name_healthy = healthys{6};
+% % name_RClim = RClims{6};
+% t            = healthy_struct.data.tout;
+% 
+% kin_exp      = kinematics.mot_struct.euler;
+% kin_exp = interp1(kinematics.mot_struct.time,kin_exp,t,"spline");
+% kin_exp = create_objective_traj_eul(kin_exp,'YZY',0);
+% % t = linspace(0,length(t),length(t));
+% 
+% kin_healthy_loc  = quat2eul_motion(healthy_struct.data.trajectories,'YZY');
+% kin_healthy = create_objective_traj_eul(kin_healthy_loc,'YZY',1);
+% % kin_RC_loc     = quat2eul_motion(RClim_struct.data.trajectories,'YZY');
+% % kin_RC  = create_objective_traj_eul(kin_RC_loc,'YZY',1);
+% GH_healthy = kin_healthy_loc(:,8);
+% % GH_RClim = kin_RC_loc(:,8);
+% 
+% 
+% fro = [1,41];
+% sca = [101,135];
+% sag = [204, 236];
+% [SCHR_frontal,info_frontal] = compute_SCHR(kin_healthy(fro(1):fro(2),8)*180/pi,kin_healthy(fro(1):fro(2),5)*180/pi,GH_healthy(fro(1):fro(2))*180/pi);
+% [SCHR_scapular,info_scapular] = compute_SCHR(kin_healthy(sca(1):sca(2),8)*180/pi,kin_healthy(sca(1):sca(2),5)*180/pi,GH_healthy(sca(1):sca(2))*180/pi);
+% [SCHR_sagittal,info_sagittal] = compute_SCHR(kin_healthy(sag(1):sag(2),8)*180/pi,kin_healthy(sag(1):sag(2),5)*180/pi,GH_healthy(sag(1):sag(2))*180/pi);
+% % SCHR_frontal
 % SCHR_scapular
 % SCHR_sagittal
 % 
-[SCHR_frontal_RClim,info_frontal_RClim] = compute_SCHR(kin_RC(fro(1):fro(2),8)*180/pi,kin_RC(fro(1):fro(2),5)*180/pi,GH_RClim(fro(1):fro(2))*180/pi);
-[SCHR_scapular_RClim,info_scapular_RClim] = compute_SCHR(kin_RC(sca(1):sca(2),8)*180/pi,kin_RC(sca(1):sca(2),5)*180/pi,GH_RClim(sca(1):sca(2))*180/pi);
-[SCHR_sagittal_RClim,info_sagittal_RClim] = compute_SCHR(kin_RC(sag(1):sag(2),8)*180/pi,kin_RC(sag(1):sag(2),5)*180/pi,GH_RClim(sag(1):sag(2))*180/pi);
+% [SCHR_frontal_RClim,info_frontal_RClim] = compute_SCHR(kin_RC(fro(1):fro(2),8)*180/pi,kin_RC(fro(1):fro(2),5)*180/pi,GH_RClim(fro(1):fro(2))*180/pi);
+% [SCHR_scapular_RClim,info_scapular_RClim] = compute_SCHR(kin_RC(sca(1):sca(2),8)*180/pi,kin_RC(sca(1):sca(2),5)*180/pi,GH_RClim(sca(1):sca(2))*180/pi);
+% [SCHR_sagittal_RClim,info_sagittal_RClim] = compute_SCHR(kin_RC(sag(1):sag(2),8)*180/pi,kin_RC(sag(1):sag(2),5)*180/pi,GH_RClim(sag(1):sag(2))*180/pi);
 % SCHR_frontal_RClim
 % SCHR_scapular_RClim
 % SCHR_sagittal_RClim
-print_SCHR('Frontal / Healthy', SCHR_frontal,info_frontal);
-print_SCHR('Scapular / Healthy', SCHR_scapular,info_scapular);
-print_SCHR('Sagittal / Healthy', SCHR_sagittal,info_sagittal);
+% print_SCHR(['Frontal / '  name_healthy], SCHR_frontal,info_frontal);
+% print_SCHR(['Scapular / ' name_healthy], SCHR_scapular,info_scapular);
+% print_SCHR(['Sagittal / ' name_healthy], SCHR_sagittal,info_sagittal);
 
-print_SCHR('Frontal / RC-limited', SCHR_frontal_RClim,info_frontal_RClim);
-print_SCHR('Scapular / RC-limited', SCHR_scapular_RClim,info_scapular_RClim);
-print_SCHR('Sagittal / RC-limited', SCHR_sagittal_RClim,info_sagittal_RClim);
-
-function print_SCHR(name, SCHR, info)
-fprintf('\n%s\n', name);
-fprintf('%-11s %4s %8s %6s %9s %8s %7s %7s %7s %7s\n', ...
-    'phase','n','slope','R2','endpoint','range','dTH','dTS','dGH','revTS');
-for i = 1:numel(SCHR)
-    fprintf('%4.0f-%-6.0f %4d %8.2f %6.3f %9.2f %8.2f %7.1f %7.1f %7.1f %7.2f\n', ...
-        info.phase(i,1), info.phase(i,2), info.n(i), info.slope(i), ...
-        info.R2(i), info.endpoint(i), info.range(i), ...
-        info.netTH(i), info.netTS(i), info.netGH(i), info.fracRevTS(i));
-end
-end
+% print_SCHR(['Frontal / ',name_RClim], SCHR_frontal_RClim,info_frontal_RClim);
+% print_SCHR(['Scapular / ',name_RClim], SCHR_scapular_RClim,info_scapular_RClim);
+% print_SCHR(['Sagittal / ',name_RClim], SCHR_sagittal_RClim,info_sagittal_RClim);
 
 % ---------- Labels ----------
 labels = { ...
@@ -721,26 +766,61 @@ healthy_interp_style = {'--','Color','blue','LineWidth',0.8};
 RC_style      = {'-','Color','red','LineWidth',lw};
 RC_interp_style = {'--','Color','red','LineWidth',0.8};
 alphabet = {'a','b','c','d','e','f','g','h','i','i'};
+names = {'Experimental trajectory'};
 for i = 1:9
     nexttile; hold on; box on;
+
+    for isim = 1:length(varargin)
+    healthys = varargin{isim};
+    healthy_struct = load(['Motions\',healthys{5},'\',healthys{3},'\',healthys{1},'.mat']);
+    % RClim_struct   = load(['Motions\',RClims{5},'\',RClims{3},'\',RClims{1},'.mat']);
+    % healthy_struct
+    name_healthy = healthys{6};
+    if i == 1
+        names{end+1} = name_healthy;
+    end
+    % name_RClim = RClims{6};
+    t            = healthy_struct.data.tout;
+    
+    kin_exp      = kinematics.mot_struct.euler;
+    kin_exp = interp1(kinematics.mot_struct.time,kin_exp,t,"spline");
+    kin_exp = create_objective_traj_eul(kin_exp,'YZY',0);
+    % t = linspace(0,length(t),length(t));
+    
+    kin_healthy_loc  = quat2eul_motion(healthy_struct.data.trajectories,'YZY');
+    kin_healthy = create_objective_traj_eul(kin_healthy_loc,'YZY',1);
+    % kin_RC_loc     = quat2eul_motion(RClim_struct.data.trajectories,'YZY');
+    % kin_RC  = create_objective_traj_eul(kin_RC_loc,'YZY',1);
+    GH_healthy = kin_healthy_loc(:,8);
+    % GH_RClim = kin_RC_loc(:,8);
+    
+    
+    fro = [1,41];
+    sca = [101,135];
+    sag = [204, 236];
+    [SCHR_frontal,info_frontal] = compute_SCHR(kin_healthy(fro(1):fro(2),8)*180/pi,kin_healthy(fro(1):fro(2),5)*180/pi,GH_healthy(fro(1):fro(2))*180/pi);
+    [SCHR_scapular,info_scapular] = compute_SCHR(kin_healthy(sca(1):sca(2),8)*180/pi,kin_healthy(sca(1):sca(2),5)*180/pi,GH_healthy(sca(1):sca(2))*180/pi);
+    [SCHR_sagittal,info_sagittal] = compute_SCHR(kin_healthy(sag(1):sag(2),8)*180/pi,kin_healthy(sag(1):sag(2),5)*180/pi,GH_healthy(sag(1):sag(2))*180/pi);
+    print_SCHR(['Frontal / '  name_healthy], SCHR_frontal,info_frontal);
+    print_SCHR(['Scapular / ' name_healthy], SCHR_scapular,info_scapular);
+    print_SCHR(['Sagittal / ' name_healthy], SCHR_sagittal,info_sagittal);
     if i ~= 3
-        plot(t, rad2deg(kin_exp(:,i)), exp_style{:});
+        plot(t, rad2deg(kin_exp(:,i)), exp_style{:}); hold on
     end
 
     if i == 7 || i == 9
         kin_healthy_interp = fillmissing(kin_healthy,'linear');
-        plot(t, rad2deg(kin_healthy_interp(:,i)), healthy_interp_style{:}); hold on
-        plot(t, rad2deg(kin_healthy(:,i)), healthy_style{:});
+        plot(t, rad2deg(kin_healthy_interp(:,i))); hold on
+        plot(t, rad2deg(kin_healthy(:,i))); hold on
 
-        kin_RC_interp = fillmissing(kin_RC,'linear');
-        plot(t, rad2deg(kin_RC_interp(:,i)), RC_interp_style{:}); hold on
-        plot(t, rad2deg(kin_RC(:,i)), RC_style{:});
+        % kin_RC_interp = fillmissing(kin_RC,'linear');
+        % plot(t, rad2deg(kin_RC_interp(:,i)), RC_interp_style{:}); hold on
+        % plot(t, rad2deg(kin_RC(:,i)), RC_style{:});
     else
-        plot(t, rad2deg(kin_healthy(:,i)), healthy_style{:});
-        plot(t, rad2deg(kin_RC(:,i)), RC_style{:});
+        plot(t, rad2deg(kin_healthy(:,i)));
+        % plot(t, rad2deg(kin_RC(:,i)), RC_style{:});
     end
     
-
 
     title(labels{i});
     xlabel(['Time (s)',newline,'']);
@@ -751,6 +831,7 @@ for i = 1:9
     text(0.5, -0.55, ['(',alphabet{i},')'], 'Units', 'normalized', ...
     'VerticalAlignment', 'top', 'HorizontalAlignment', 'center', ...
     'FontName', 'Times New Roman', 'FontSize', 8);
+    end
 end
 
 % "predicted" annotation
@@ -785,12 +866,9 @@ annotation('textbox', [0.96 0.235 0.0 0.0], ...
     'FontSize', 15, ...
     'FontAngle', 'italic', ...
     'HorizontalAlignment', 'center');
-
-
+names
 % ---------- Legend ----------
-lg = legend({'Experimental data','', ...
-             'Healthy','', ...
-             'RC-limited'}); %, ...
+lg = legend(names,'NumColumns',3); %, ...
              % 'Orientation','horizontal', ...
              % 'Location','southoutside');
 lg.FontSize = 8;
@@ -801,6 +879,18 @@ set(gca, 'LineWidth',0.2)
 
 % exportgraphics(gcf,'zoufa5_new.png','Resolution',600);
     
+end
+
+function print_SCHR(name, SCHR, info)
+fprintf('\n%s\n', name);
+fprintf('%-11s %4s %8s %6s %9s %8s %7s %7s %7s %7s %7s\n', ...
+    'phase','n','slope','R2','endpoint','range','dTH','dTS','dGH','revTS','maxTS');
+for i = 1:numel(SCHR)
+    fprintf('%4.0f-%-6.0f %4d %8.2f %6.3f %9.2f %8.2f %7.1f %7.1f %7.1f %7.2f %7.2f\n', ...
+        info.phase(i,1), info.phase(i,2), info.n(i), info.slope(i), ...
+        info.R2(i), info.endpoint(i), info.range(i), ...
+        info.netTH(i), info.netTS(i), info.netGH(i), info.fracRevTS(i), info.maxTS(i));
+end
 end
 
 % function [SCHR] = compute_SCHR(TH, TS, GH)
@@ -921,7 +1011,7 @@ SCHR = nan(nPhases, 1);
 z    = nan(nPhases, 1);
 info = struct('phase', phaseEdges, 'n', z, 'slope', z, 'R2', z, ...
               'endpoint', z, 'range', z, 'netTH', z, 'netTS', z, ...
-              'netGH', z, 'spanTS', z, 'fracRevTS', z);
+              'netGH', z, 'spanTS', z, 'fracRevTS', z, 'maxTS', z);
 
 % ----------------------------------------------------------------- loop
 for i = 1:nPhases
@@ -940,6 +1030,7 @@ for i = 1:nPhases
     info.netTS(i)  = ts(end) - ts(1);
     info.netGH(i)  = gh(end) - gh(1);
     info.spanTS(i) = max(ts) - min(ts);
+    info.maxTS(i) = ts(end);
 
     % How much of the phase moves against the net TS direction. A large
     % value means max-min is not measuring the net rotation.
