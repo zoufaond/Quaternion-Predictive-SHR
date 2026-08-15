@@ -38,18 +38,18 @@ addpath Matlab_functions/
 % res_q3 = {['res_SHR_Healthy_Scabduction_Flexion_wGH2'],'quat',motion_name,'YZY',participant,'Healthy Scab-Flex wGH=2'};
 % res_q4 = {['res_SHR_Healthy_drinking_shelf_reaching_wGH2'],'quat',motion_name,'YZY',participant,'Healthy ADLs wGH=2'};
 % plot_IEEE_kinematics(OS_struct,res_q1,res_q2,res_q3,res_q4);
-% 
-% participant = 'par2';
-% OS_model = ['Motions/',participant,'/OS_model.mat'];
-% motion_name = 'All_elevations';
-% OS_struct = load(['Motions/',participant,'/',motion_name,'/',motion_name,'.mat']);
-% res_q1 = {['res_SHR_RClim0_Elevation_Scabduction_wGH10'],'quat',motion_name,'YZY',participant,'RClim0 Elev-Scab wGH=10'};
-% res_q2 = {['res_SHR_RClim0_Elevation_Flexion_wGH10'],'quat',motion_name,'YZY',participant,'RClim0 Elev-Flex wGH=10'};
-% res_q3 = {['res_SHR_RClim0_Scabduction_Flexion_wGH10'],'quat',motion_name,'YZY',participant,'RClim0 Scab-Flex wGH=10'};
-% res_q4 = {['res_SHR_RClim0_drinking_shelf_reaching_wGH10'],'quat',motion_name,'YZY',participant,'RClim0 ADLs wGH=10'};
-% plot_IEEE_kinematics(OS_struct,res_q1,res_q2,res_q3,res_q4);
+clc
+participant = 'par2';
+OS_model = ['Motions/',participant,'/OS_model.mat'];
+motion_name = 'All_elevations';
+OS_struct = load(['Motions/',participant,'/',motion_name,'/',motion_name,'.mat']);
+res_q1 = {['res_SHR_5'],'quat',motion_name,'YZY',participant,'infra75'};
+res_q2 = {['res_SHR_infra50_All_elevations_wGH2'],'quat',motion_name,'YZY',participant,'infra50'};
+res_q3 = {['res_SHR_RClim0_Scabduction_Flexion_wGH10'],'quat',motion_name,'YZY',participant,'RClim0 Scab-Flex wGH=10'};
+res_q4 = {['res_SHR_RClim0_drinking_shelf_reaching_wGH10'],'quat',motion_name,'YZY',participant,'RClim0 ADLs wGH=10'};
+plot_IEEE_kinematics(OS_struct,res_q1);
 
-% plotGHStabilityAnglesIEEE(res_q1,res_q2)
+% plotGHStabilityAnglesIEEE(res_q1)
 % % res_q1 = {['res_SHR_0'],'quat',motion_name,'YZY',participant,'Healthy calib wGH=2'};
 % % res_q2 = {['res_SHR_RClim050_calib_wgh2'],'quat',motion_name,'YZY',participant,'RClim calib wGH=2 RC 50%'};
 % % plot_IEEE_kinematics(OS_struct,res_q1,res_q2)
@@ -791,19 +791,21 @@ for i = 1:9
     kin_healthy = create_objective_traj_eul(kin_healthy_loc,'YZY',1);
     % kin_RC_loc     = quat2eul_motion(RClim_struct.data.trajectories,'YZY');
     % kin_RC  = create_objective_traj_eul(kin_RC_loc,'YZY',1);
-    GH_healthy = kin_healthy_loc(:,8);
+    GH_healthy = rotyzy(healthy_struct.data.trajectories(:,9:12));
     % GH_RClim = kin_RC_loc(:,8);
     
-    
-    fro = [1,41];
-    sca = [101,135];
-    sag = [204, 236];
-    [SCHR_frontal,info_frontal] = compute_SCHR(kin_healthy(fro(1):fro(2),8)*180/pi,kin_healthy(fro(1):fro(2),5)*180/pi,GH_healthy(fro(1):fro(2))*180/pi);
-    [SCHR_scapular,info_scapular] = compute_SCHR(kin_healthy(sca(1):sca(2),8)*180/pi,kin_healthy(sca(1):sca(2),5)*180/pi,GH_healthy(sca(1):sca(2))*180/pi);
-    [SCHR_sagittal,info_sagittal] = compute_SCHR(kin_healthy(sag(1):sag(2),8)*180/pi,kin_healthy(sag(1):sag(2),5)*180/pi,GH_healthy(sag(1):sag(2))*180/pi);
-    print_SCHR(['Frontal / '  name_healthy], SCHR_frontal,info_frontal);
-    print_SCHR(['Scapular / ' name_healthy], SCHR_scapular,info_scapular);
-    print_SCHR(['Sagittal / ' name_healthy], SCHR_sagittal,info_sagittal);
+    if i == 1
+        fro = [1,41];
+        sca = [101,135];
+        sag = [204, 236];
+        [SCHR_frontal,info_frontal] = compute_SCHR(kin_healthy(fro(1):fro(2),8)*180/pi,kin_healthy(fro(1):fro(2),5)*180/pi,GH_healthy(fro(1):fro(2))*180/pi);
+        [SCHR_scapular,info_scapular] = compute_SCHR(kin_healthy(sca(1):sca(2),8)*180/pi,kin_healthy(sca(1):sca(2),5)*180/pi,GH_healthy(sca(1):sca(2))*180/pi);
+        [SCHR_sagittal,info_sagittal] = compute_SCHR(kin_healthy(sag(1):sag(2),8)*180/pi,kin_healthy(sag(1):sag(2),5)*180/pi,GH_healthy(sag(1):sag(2))*180/pi);
+        print_SCHR(['Frontal / '  name_healthy], SCHR_frontal,info_frontal);
+        print_SCHR(['Scapular / ' name_healthy], SCHR_scapular,info_scapular);
+        print_SCHR(['Sagittal / ' name_healthy], SCHR_sagittal,info_sagittal);
+    end
+
     if i ~= 3
         plot(t, rad2deg(kin_exp(:,i)), exp_style{:}); hold on
     end
@@ -866,7 +868,7 @@ annotation('textbox', [0.96 0.235 0.0 0.0], ...
     'FontSize', 15, ...
     'FontAngle', 'italic', ...
     'HorizontalAlignment', 'center');
-names
+% names
 % ---------- Legend ----------
 lg = legend(names,'NumColumns',3); %, ...
              % 'Orientation','horizontal', ...
@@ -876,6 +878,12 @@ lg.Box = 'off';
 lg.Layout.Tile = 'south';
 lg.Orientation = 'horizontal';
 set(gca, 'LineWidth',0.2)
+
+figure
+plot(t,rad2deg(GH_healthy)); hold on
+xline(t(sca(1))); hold on
+xline(t(sag(1)))
+% plot(t,rad2deg(kin_healthy_loc(:,7)));
 
 % exportgraphics(gcf,'zoufa5_new.png','Resolution',600);
     
@@ -890,6 +898,51 @@ for i = 1:numel(SCHR)
         info.phase(i,1), info.phase(i,2), info.n(i), info.slope(i), ...
         info.R2(i), info.endpoint(i), info.range(i), ...
         info.netTH(i), info.netTS(i), info.netGH(i), info.fracRevTS(i), info.maxTS(i));
+end
+end
+
+function elev=rotyzy(quat)
+% calculates the Euler angles around the y,z, and new y axes
+% from the rotation matrix R
+num_data = size(quat,1);
+elev = zeros(1,num_data);
+for i = 1:num_data
+r = quat2rotm(quat(i,:));
+z1 = acos(r(2,2));
+if (z1==0)
+    y=acos(r(1,1));
+	z=z1;
+	ya=0.0;
+	return;
+end
+sy = r(3,2)/sin(z1);
+cy = -r(1,2)/sin(z1);
+y1 = atan2(sy,cy);
+sya = r(2,3)/sin(z1);
+cya = r(2,1)/sin(z1);
+ya1 = atan2(sya,cya);
+z2 = -z1;
+sy = r(3,2)/sin(z2);
+cy = -r(1,2)/sin(z2);
+y2 = atan2(sy,cy);
+sya = r(2,3)/sin(z2);
+cya = r(2,1)/sin(z2);
+ya2 = atan2(sya,cya);
+if (0 <= z1 && z1 <= pi)
+   y = y1;
+   z = z1;
+   ya = ya1;
+else
+   y = y2;
+   z = z2;
+   ya = ya2;
+end
+% if z<(10*pi/180)
+%     ya=y+ya;
+%     y=0;
+% end
+elev(i) = z;
+
 end
 end
 
@@ -1637,4 +1690,169 @@ function time_positions = find_gimbal_lock(time,angles)
             time_positions = [time_positions time(i)+zero_crossing];
         end
     end
+end
+
+function results = computational_performance_RMS_angles2(cfg)
+%COMPUTATIONAL_PERFORMANCE_RMS_ANGLES  Euler vs quaternion tracking accuracy.
+%
+%   Reports three complementary views of tracking error:
+%
+%   (1) Per-DOF Euler-component error, with mean +/- SD across trials, 95%
+%       CI on the paired difference, max absolute error, bias and % of ROM.
+%       Answers R1.4.
+%
+%   (2) The same, restricted to samples above a thoracohumeral elevation
+%       threshold. Sweeping the threshold shows that the quaternion penalty
+%       in the first and third YZY axes is a conversion artefact, not a
+%       tracking failure. Answers R1.5.
+%
+%   (3) Per-segment GEODESIC orientation error: the rotation angle of
+%       R_sim * R_ref'. Sequence-free and singularity-free, so it scores
+%       both formulations on the same physical quantity. Euler component
+%       error cannot do this: near the YZY singularity the first and third
+%       angles are individually undetermined, and the Euler simulation is
+%       additionally being scored on its own objective function.
+%
+%   Robust statistics (median, 95th percentile) and the elevation at which
+%   the maximum occurs are reported alongside RMSE, because the large
+%   scapular maxima are isolated spikes rather than distributed error.
+
+% ------------------------------------------------------------------ config
+if nargin < 1, cfg = struct(); end
+def = struct( ...
+    'motions',      {{'Elevation','Scabduction','Flexion'}}, ...
+    'participants', {{'par1','par2','par3'}}, ...
+    'rotType',      {{'euler','quat'}}, ...
+    'rotWeights',   {{'50','200'}}, ...
+    'root',         'Motions', ...
+    'nSamp',        100, ...
+    'seq',          'YZY', ...
+    'globFlag',     0, ...
+    'elevCol',      8, ...
+    'elevThresh',   0, ...          % deg; 0 = use all samples
+    'dofCols',      [1 2 4 5 6 7 8 9], ...
+    'dofNames',     {{'Clav protraction','Clav elevation', ...
+                      'Scap protraction','Scap upward rot','Scap tilt', ...
+                      'TH plane of elev','TH elevation','TH axial rot'}}, ...
+    'segCols',      {{1:3, 4:6, 7:9}}, ...
+    'segNames',     {{'Thoracoclavicular','Thoracoscapular','Thoracohumeral'}}, ...
+    'segSeq',       {{'YZY','YZY','YZY'}}, ...
+    'intrinsic',    true);          % see eulToRotm and the convention check
+fn = fieldnames(def);
+for k = 1:numel(fn)
+    if ~isfield(cfg, fn{k}) || isempty(cfg.(fn{k})), cfg.(fn{k}) = def.(fn{k}); end
+end
+
+nPar = numel(cfg.participants);
+nMot = numel(cfg.motions);
+nDOF = numel(cfg.dofCols);
+nSeg = numel(cfg.segCols);
+nTr  = nPar * nMot;
+
+% ------------------------------------------------------------- preallocate
+Z  = nan(nTr, nDOF);
+Zs = nan(nTr, nSeg);
+blankD = struct('rmse',Z,'maxabs',Z,'p95',Z,'med',Z,'bias',Z,'rom',Z, ...
+                'nrmse',Z,'elevAtMax',Z);
+blankG = struct('rmse',Zs,'maxabs',Zs,'p95',Zs,'med',Zs,'elevAtMax',Zs);
+
+results.trial.euler = blankD;   results.trial.quat = blankD;
+results.geo.euler   = blankG;   results.geo.quat   = blankG;
+results.trial.label = cell(nTr,1);
+results.trial.fracKept = nan(nTr,1);
+
+iTr = 0;
+
+% ------------------------------------------------------------------- loop
+for ipar = 1:nPar
+    for imot = 1:nMot
+
+        iTr = iTr + 1;
+        results.trial.label{iTr} = sprintf('%s / %s', ...
+            cfg.participants{ipar}, cfg.motions{imot});
+
+        OS = load(fullfile(cfg.root, cfg.participants{ipar}, ...
+                           cfg.motions{imot}, [cfg.motions{imot} '.mat']));
+        IK_glob = create_objective_traj_eul(OS.mot_struct.euler, cfg.seq, cfg.globFlag);
+        assert(size(IK_glob,1) == cfg.nSamp, ...
+            'IK reference has %d rows, expected %d.', size(IK_glob,1), cfg.nSamp);
+
+        elev = rad2deg(IK_glob(:, cfg.elevCol));
+        keep = elev >= cfg.elevThresh;
+        results.trial.fracKept(iTr) = mean(keep);
+
+        refDeg = rad2deg(IK_glob(:, cfg.dofCols));
+
+        for irot = 1:numel(cfg.rotType)
+
+            S = load(fullfile(cfg.root, cfg.participants{ipar}, cfg.motions{imot}, ...
+                 ['res_' cfg.rotType{irot} '_' cfg.motions{imot} '_' cfg.rotWeights{irot} '.mat']));
+
+            t    = S.data.tout;
+            traj = interp1(t, S.data.trajectories, linspace(0, t(end), cfg.nSamp));
+
+            if strcmp(cfg.rotType{irot}, 'quat')
+                traj = quat2eul_motion(traj, cfg.seq);
+            end
+            simGlob = create_objective_traj_eul(traj, cfg.seq, cfg.globFlag);
+            simDeg  = rad2deg(simGlob(:, cfg.dofCols));
+
+            f = cfg.rotType{irot};
+
+            % --- (1)-(2) Euler-component error -----------------------------
+            err = simDeg(keep,:) - refDeg(keep,:);
+            results.trial.(f) = putDOF(results.trial.(f), iTr, err, ...
+                                       refDeg(keep,:), elev(keep));
+
+            % --- (3) geodesic orientation error ----------------------------
+            g = nan(sum(keep), nSeg);
+            for iseg = 1:nSeg
+                g(:,iseg) = geodesicError( ...
+                    simGlob(keep, cfg.segCols{iseg}), ...
+                    IK_glob(keep, cfg.segCols{iseg}), ...
+                    cfg.segSeq{iseg}, cfg.intrinsic);
+            end
+            results.geo.(f) = putGeo(results.geo.(f), iTr, g, elev(keep));
+        end
+    end
+end
+
+% -------------------------------------------------------------- aggregate
+results.summary.euler = aggregate(results.trial.euler);
+results.summary.quat  = aggregate(results.trial.quat);
+results.geoSum.euler  = aggregate(results.geo.euler);
+results.geoSum.quat   = aggregate(results.geo.quat);
+
+results.paired.dof = aggVec(results.trial.quat.rmse - results.trial.euler.rmse);
+results.paired.geo = aggVec(results.geo.quat.rmse   - results.geo.euler.rmse);
+
+% Excess error attributable to the quaternion formulation. Equal values in
+% the first and third YZY axes indicate coordinate degeneracy rather than
+% tracking error, since a perturbation near the singularity splits equally
+% and oppositely between them.
+results.excess.dof = sqrt(max(results.summary.quat.rmse_mean.^2 - ...
+                              results.summary.euler.rmse_mean.^2, 0));
+results.excess.geo = sqrt(max(results.geoSum.quat.rmse_mean.^2 - ...
+                              results.geoSum.euler.rmse_mean.^2, 0));
+
+results.cfg = cfg;
+
+% ------------------------------------------------------------------ report
+hdr = 'ALL SAMPLES';
+if cfg.elevThresh > 0
+    hdr = sprintf('EXCLUDING TH ELEVATION < %g deg', cfg.elevThresh);
+end
+
+printGeo(hdr, cfg.segNames, results.geoSum, results.paired.geo, results.excess.geo);
+printDOF(cfg.dofNames, results.summary, results.paired.dof, results.excess.dof);
+
+fprintf('\nSamples retained: %.1f%% (range %.1f-%.1f%% across trials)\n', ...
+    100*mean(results.trial.fracKept), ...
+    100*min(results.trial.fracKept), 100*max(results.trial.fracKept));
+fprintf('n = %d trials (%d participants x %d motions)\n', nTr, nPar, nMot);
+fprintf(['\nCONVENTION CHECK: geodesic error for the EULER run should be of\n' ...
+         'the same order as its component errors (~1-3 deg). A value an order\n' ...
+         'of magnitude larger means eulToRotm does not match the convention\n' ...
+         'used by create_objective_traj_eul; toggle cfg.intrinsic and retry.\n\n']);
+
 end

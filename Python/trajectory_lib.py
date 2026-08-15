@@ -6,6 +6,15 @@ from scipy.spatial.transform import Rotation as spat
 import matplotlib.pyplot as plt
 import pickle
 
+def check_stability(faux,tilt_y,tilt_z):
+    reactions_rotated = R_y_np(tilt_y*np.pi/180).T @ R_z_np(tilt_z*np.pi/180).T @ np.array([*faux,1])
+    AP_lim = 14.84*np.pi/180
+    SI_lim = 23.74*np.pi/180
+    theta_AP = np.arctan2(reactions_rotated[2],-reactions_rotated[0])
+    theta_SI = np.arctan2(reactions_rotated[1],-reactions_rotated[0])
+    ellipse = (theta_AP/AP_lim)**2 + (theta_SI/SI_lim)**2
+    return ellipse
+
 def initial_guess_from_solution(solution_file,num_free):
 
     solution = sc.io.loadmat(solution_file)['data'][0,0]

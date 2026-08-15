@@ -5,6 +5,7 @@ import sympy.physics.mechanics as me
 from scipy.spatial.transform import Rotation as spat
 import pickle
 
+
 def objective_state_diff(num_nodes,interval_value):
     
     """Build objective and Jacobian terms that penalize state rate of change squared."""
@@ -282,7 +283,7 @@ def objective_traj_eul(num_coords,interval_value,GH_seq = 'YZY'):
     return obj_np,obj_jac_np, obj_SC_np, obj_jac_SC_np
 
 
-def polynomials_quat(model_struct,q,u,derive,RC_lim, calibrated_params = None):
+def polynomials_quat(model_struct,q,u,derive,muscles_reduced,RC_lim, calibrated_params = None):
     """
     Calculates muscle-tendon forces, moment arms, and torques for a shoulder musculoskeletal model using quaternion-based kinematics and polynomial approximations for wrapped muscles.
 
@@ -396,9 +397,10 @@ def polynomials_quat(model_struct,q,u,derive,RC_lim, calibrated_params = None):
                 except:
                     fmax.append(muscle['fmax'][0,0].item())
                     lceopt.append(muscle['lceopt'][0,0].item())
-
-            if 'supra' in mus_name or 'infra' in mus_name:
-                fmax[i] = fmax[i] * RC_lim
+            for mus_red in muscles_reduced:
+                if mus_red in mus_name:
+                    fmax[i] = fmax[i] * RC_lim
+                    print('Reduced fmax for ' + mus_name + ' by factor of ' + str(RC_lim))
 
     # preallocate muscle length, force, and Jacobian arrays
     mus_lengths_full = sp.zeros(nmus,1)
