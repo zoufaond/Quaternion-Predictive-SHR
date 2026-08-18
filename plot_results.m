@@ -19,15 +19,42 @@ addpath Matlab_functions/
 % - res_SHR_5 is taken from the sensitivity analysis study and correspond
 % to the GH_weight of 10
 
+
 % participant = 'par2';
 % OS_model = ['Motions/',participant,'/OS_model.mat'];
 % motion_name = 'All_elevations';
 % OS_struct = load(['Motions/',participant,'/',motion_name,'/',motion_name,'.mat']);
-% res_q1 = {['res_SHR_Healthy_Elevation_Scabduction_wGH0'],'quat',motion_name,'YZY',participant,'Healthy Elev-Scab wGH=0'};
-% res_q2 = {['res_SHR_Healthy_Elevation_Flexion_wGH0'],'quat',motion_name,'YZY',participant,'Healthy Elev-Flex wGH=0'};
-% res_q3 = {['res_SHR_Healthy_Scabduction_Flexion_wGH0'],'quat',motion_name,'YZY',participant,'Healthy Scab-Flex wGH=0'};
-% res_q4 = {['res_SHR_Healthy_drinking_shelf_reaching_wGH0'],'quat',motion_name,'YZY',participant,'Healthy ADLs wGH=0'};
+% res_q1 = {['res_SHR_0'],'quat',motion_name,'YZY',participant,'Calibrated model (All-elevs)',[0.00 0.45 0.74]};
+% res_q2 = {['res_SHR_6'],'quat',motion_name,'YZY',participant,'Generic model',[0.47 0.67 0.19]};
+% plot_IEEE_kinematics(OS_struct,res_q1,res_q2);
+
+% participant = 'par2';
+% OS_model = ['Motions/',participant,'/OS_model.mat'];
+% motion_name = 'All_elevations';
+% OS_struct = load(['Motions/',participant,'/',motion_name,'/',motion_name,'.mat']);
+% res_q1 = {['res_SHR_infra75_All_elevations_wGH2'],'quat',motion_name,'YZY',participant,'Infra=75% wGH=2'};
+% res_q2 = {['res_SHR_infra50_All_elevations_wGH2'],'quat',motion_name,'YZY',participant,'Infra=50% wGH=2'};
+% res_q3 = {['res_SHR_infra25_All_elevations_wGH4'],'quat',motion_name,'YZY',participant,'Infra=25% wGH=4'};
+% res_q4 = {['res_SHR_infra0_All_elevations_wGH6'],'quat',motion_name,'YZY',participant,'Infra=0% wGH=6'};
 % plot_IEEE_kinematics(OS_struct,res_q1,res_q2,res_q3,res_q4);
+
+% participant = 'par2';
+% OS_model = ['Motions/',participant,'/OS_model.mat'];
+% motion_name = 'All_elevations';
+% OS_struct = load(['Motions/',participant,'/',motion_name,'/',motion_name,'.mat']);
+% res_q1 = {['res_SHR_supra75_All_elevations_wGH2'],'quat',motion_name,'YZY',participant,'Supra=75% wGH=2'};
+% res_q2 = {['res_SHR_supra50_All_elevations_wGH2'],'quat',motion_name,'YZY',participant,'Supra=50% wGH=2'};
+% res_q3 = {['res_SHR_supra25_All_elevations_wGH2'],'quat',motion_name,'YZY',participant,'Supra=25% wGH=2'};
+% res_q4 = {['res_SHR_supra0_All_elevations_wGH4'],'quat',motion_name,'YZY',participant,'Supra=0% wGH=4'};
+% plot_IEEE_kinematics(OS_struct,res_q1,res_q2,res_q3,res_q4);
+
+% %%%%%%%% RC limitation sensitivity analysis %%%%%%%
+% participant = 'par2';
+% OS_model = ['Motions/',participant,'/OS_model.mat'];
+% motion_name = 'All_elevations';
+% OS_struct = load(['Motions/',participant,'/',motion_name,'/',motion_name,'.mat']);
+% plot_IEEE_kinematics_2DoFs_RCSA(OS_struct)
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % participant = 'par2';
 % OS_model = ['Motions/',participant,'/OS_model.mat'];
@@ -38,16 +65,16 @@ addpath Matlab_functions/
 % res_q3 = {['res_SHR_Healthy_Scabduction_Flexion_wGH2'],'quat',motion_name,'YZY',participant,'Healthy Scab-Flex wGH=2'};
 % res_q4 = {['res_SHR_Healthy_drinking_shelf_reaching_wGH2'],'quat',motion_name,'YZY',participant,'Healthy ADLs wGH=2'};
 % plot_IEEE_kinematics(OS_struct,res_q1,res_q2,res_q3,res_q4);
-clc
-participant = 'par2';
-OS_model = ['Motions/',participant,'/OS_model.mat'];
-motion_name = 'All_elevations';
-OS_struct = load(['Motions/',participant,'/',motion_name,'/',motion_name,'.mat']);
-res_q1 = {['res_SHR_5'],'quat',motion_name,'YZY',participant,'infra75'};
-res_q2 = {['res_SHR_infra50_All_elevations_wGH2'],'quat',motion_name,'YZY',participant,'infra50'};
-res_q3 = {['res_SHR_RClim0_Scabduction_Flexion_wGH10'],'quat',motion_name,'YZY',participant,'RClim0 Scab-Flex wGH=10'};
-res_q4 = {['res_SHR_RClim0_drinking_shelf_reaching_wGH10'],'quat',motion_name,'YZY',participant,'RClim0 ADLs wGH=10'};
-plot_IEEE_kinematics(OS_struct,res_q1);
+
+% participant = 'par2';
+% OS_model = ['Motions/',participant,'/OS_model.mat'];
+% motion_name = 'All_elevations';
+% OS_struct = load(['Motions/',participant,'/',motion_name,'/',motion_name,'.mat']);
+% res_q1 = {['res_SHR_5'],'quat',motion_name,'YZY',participant,'infra75'};
+% res_q2 = {['res_SHR_infra50_All_elevations_wGH2'],'quat',motion_name,'YZY',participant,'infra50'};
+% res_q3 = {['res_SHR_RClim0_Scabduction_Flexion_wGH10'],'quat',motion_name,'YZY',participant,'RClim0 Scab-Flex wGH=10'};
+% res_q4 = {['res_SHR_RClim0_drinking_shelf_reaching_wGH10'],'quat',motion_name,'YZY',participant,'RClim0 ADLs wGH=10'};
+% plot_IEEE_kinematics(OS_struct,res_q1);
 
 % plotGHStabilityAnglesIEEE(res_q1)
 % % res_q1 = {['res_SHR_0'],'quat',motion_name,'YZY',participant,'Healthy calib wGH=2'};
@@ -701,193 +728,500 @@ cb.FontSize = 8;
 end
 
 function plot_IEEE_kinematics(kinematics, varargin)
+% Nine degree of freedom kinematics plot. Each entry in varargin is a cell
+% array describing one simulation:
+%   {1} result file name, without extension
+%   {2} formulation tag, not used for plotting
+%   {3} motion folder name
+%   {4} rotation sequence tag, not used for plotting
+%   {5} participant folder name
+%   {6} legend name
+%   {7} line colour, 1 by 3 RGB
+%
+% Example:
+%   res1 = {'res_SHR_0','quat','All_elevations','YZY','par2', ...
+%           'Healthy (All elevs) wGH=2',[0 0.45 0.74]};
+%   plot_IEEE_kinematics(OS_struct, res1, res2);
 
-% for isim = 1:length(varargin)
-% healthys = varargin{isim};
-% healthy_struct = load(['Motions\',healthys{5},'\',healthys{3},'\',healthys{1},'.mat']);
-% % RClim_struct   = load(['Motions\',RClims{5},'\',RClims{3},'\',RClims{1},'.mat']);
-% % healthy_struct
-% name_healthy = healthys{6};
-% % name_RClim = RClims{6};
-% t            = healthy_struct.data.tout;
-% 
-% kin_exp      = kinematics.mot_struct.euler;
-% kin_exp = interp1(kinematics.mot_struct.time,kin_exp,t,"spline");
-% kin_exp = create_objective_traj_eul(kin_exp,'YZY',0);
-% % t = linspace(0,length(t),length(t));
-% 
-% kin_healthy_loc  = quat2eul_motion(healthy_struct.data.trajectories,'YZY');
-% kin_healthy = create_objective_traj_eul(kin_healthy_loc,'YZY',1);
-% % kin_RC_loc     = quat2eul_motion(RClim_struct.data.trajectories,'YZY');
-% % kin_RC  = create_objective_traj_eul(kin_RC_loc,'YZY',1);
-% GH_healthy = kin_healthy_loc(:,8);
-% % GH_RClim = kin_RC_loc(:,8);
-% 
-% 
-% fro = [1,41];
-% sca = [101,135];
-% sag = [204, 236];
-% [SCHR_frontal,info_frontal] = compute_SCHR(kin_healthy(fro(1):fro(2),8)*180/pi,kin_healthy(fro(1):fro(2),5)*180/pi,GH_healthy(fro(1):fro(2))*180/pi);
-% [SCHR_scapular,info_scapular] = compute_SCHR(kin_healthy(sca(1):sca(2),8)*180/pi,kin_healthy(sca(1):sca(2),5)*180/pi,GH_healthy(sca(1):sca(2))*180/pi);
-% [SCHR_sagittal,info_sagittal] = compute_SCHR(kin_healthy(sag(1):sag(2),8)*180/pi,kin_healthy(sag(1):sag(2),5)*180/pi,GH_healthy(sag(1):sag(2))*180/pi);
-% % SCHR_frontal
-% SCHR_scapular
-% SCHR_sagittal
-% 
-% [SCHR_frontal_RClim,info_frontal_RClim] = compute_SCHR(kin_RC(fro(1):fro(2),8)*180/pi,kin_RC(fro(1):fro(2),5)*180/pi,GH_RClim(fro(1):fro(2))*180/pi);
-% [SCHR_scapular_RClim,info_scapular_RClim] = compute_SCHR(kin_RC(sca(1):sca(2),8)*180/pi,kin_RC(sca(1):sca(2),5)*180/pi,GH_RClim(sca(1):sca(2))*180/pi);
-% [SCHR_sagittal_RClim,info_sagittal_RClim] = compute_SCHR(kin_RC(sag(1):sag(2),8)*180/pi,kin_RC(sag(1):sag(2),5)*180/pi,GH_RClim(sag(1):sag(2))*180/pi);
-% SCHR_frontal_RClim
-% SCHR_scapular_RClim
-% SCHR_sagittal_RClim
-% print_SCHR(['Frontal / '  name_healthy], SCHR_frontal,info_frontal);
-% print_SCHR(['Scapular / ' name_healthy], SCHR_scapular,info_scapular);
-% print_SCHR(['Sagittal / ' name_healthy], SCHR_sagittal,info_sagittal);
-
-% print_SCHR(['Frontal / ',name_RClim], SCHR_frontal_RClim,info_frontal_RClim);
-% print_SCHR(['Scapular / ',name_RClim], SCHR_scapular_RClim,info_scapular_RClim);
-% print_SCHR(['Sagittal / ',name_RClim], SCHR_sagittal_RClim,info_sagittal_RClim);
-
-% ---------- Labels ----------
 labels = { ...
     'Clavicle protraction/retraction', 'Clavicle elevation','Clavicle axial rotation', ...
     'Scapula internal/external rotation','Scapula upward/downward rotation','Scapula anterior/posterior tilting', ...
     'Humerus plane of elevation','Humerus elevation','Humerus axial rotation'};
 
+alphabet = {'a','b','c','d','e','f','g','h','i'};
+
+nsim = numel(varargin);
+lw   = 1.6;
+
 % ---------- Figure setup ----------
 figure('Color','w','Units','inches','Position',[1 1 7.16 4.3]);
 tiledlayout(3,3,'TileSpacing','compact','Padding','compact');
-% 
-% % ---------- Line styles ----------
-lw = 1.6;
-exp_style     = {'Color',[0.5 0.5 0.5],'LineWidth',1.2};                 % IK (feasible)
-healthy_style = {'-','Color','blue','LineWidth',lw};
-healthy_interp_style = {'--','Color','blue','LineWidth',0.8};
-RC_style      = {'-','Color','red','LineWidth',lw};
-RC_interp_style = {'--','Color','red','LineWidth',0.8};
-alphabet = {'a','b','c','d','e','f','g','h','i','i'};
-names = {'Experimental trajectory'};
+
+% Legend handles. First entry is the experimental trajectory.
+hLeg  = gobjects(nsim+1,1);
+names = cell(nsim+1,1);
+names{1} = 'Experimental trajectory';
+
 for i = 1:9
     nexttile; hold on; box on;
 
-    for isim = 1:length(varargin)
-    healthys = varargin{isim};
-    healthy_struct = load(['Motions\',healthys{5},'\',healthys{3},'\',healthys{1},'.mat']);
-    % RClim_struct   = load(['Motions\',RClims{5},'\',RClims{3},'\',RClims{1},'.mat']);
-    % healthy_struct
-    name_healthy = healthys{6};
-    if i == 1
-        names{end+1} = name_healthy;
-    end
-    % name_RClim = RClims{6};
-    t            = healthy_struct.data.tout;
-    
-    kin_exp      = kinematics.mot_struct.euler;
-    kin_exp = interp1(kinematics.mot_struct.time,kin_exp,t,"spline");
-    kin_exp = create_objective_traj_eul(kin_exp,'YZY',0);
-    % t = linspace(0,length(t),length(t));
-    
-    kin_healthy_loc  = quat2eul_motion(healthy_struct.data.trajectories,'YZY');
-    kin_healthy = create_objective_traj_eul(kin_healthy_loc,'YZY',1);
-    % kin_RC_loc     = quat2eul_motion(RClim_struct.data.trajectories,'YZY');
-    % kin_RC  = create_objective_traj_eul(kin_RC_loc,'YZY',1);
-    GH_healthy = rotyzy(healthy_struct.data.trajectories(:,9:12));
-    % GH_RClim = kin_RC_loc(:,8);
-    
-    if i == 1
-        fro = [1,41];
-        sca = [101,135];
-        sag = [204, 236];
-        [SCHR_frontal,info_frontal] = compute_SCHR(kin_healthy(fro(1):fro(2),8)*180/pi,kin_healthy(fro(1):fro(2),5)*180/pi,GH_healthy(fro(1):fro(2))*180/pi);
-        [SCHR_scapular,info_scapular] = compute_SCHR(kin_healthy(sca(1):sca(2),8)*180/pi,kin_healthy(sca(1):sca(2),5)*180/pi,GH_healthy(sca(1):sca(2))*180/pi);
-        [SCHR_sagittal,info_sagittal] = compute_SCHR(kin_healthy(sag(1):sag(2),8)*180/pi,kin_healthy(sag(1):sag(2),5)*180/pi,GH_healthy(sag(1):sag(2))*180/pi);
-        print_SCHR(['Frontal / '  name_healthy], SCHR_frontal,info_frontal);
-        print_SCHR(['Scapular / ' name_healthy], SCHR_scapular,info_scapular);
-        print_SCHR(['Sagittal / ' name_healthy], SCHR_sagittal,info_sagittal);
+    for isim = 1:nsim
+
+        cfg    = varargin{isim};
+        fname  = cfg{1};
+        motion = cfg{3};
+        par    = cfg{5};
+        lname  = cfg{6};
+        lcolor = cfg{7};
+
+        S = load(fullfile('Motions', par, motion, [fname '.mat']));
+        t = S.data.tout;
+
+        kin_loc = quat2eul_motion(S.data.trajectories,'YZY');
+        kin_sim = create_objective_traj_eul(kin_loc,'YZY',1);
+
+        % Experimental trajectory, plotted once per panel from the first
+        % simulation time base
+        if isim == 1 && i ~= 3
+            kin_exp = interp1(kinematics.mot_struct.time, ...
+                              kinematics.mot_struct.euler, t, 'spline');
+            kin_exp = create_objective_traj_eul(kin_exp,'YZY',0);
+            h = plot(t, rad2deg(kin_exp(:,i)), ...
+                     'Color',[0.5 0.5 0.5],'LineWidth',1.2);
+            if i == 1, hLeg(1) = h; end
+        end
+
+        % Simulated trajectory. Panels 7 and 9 hold the degrees of freedom
+        % that are interpolated through the low elevation region, shown as
+        % a dashed line underneath the solid trace.
+        if i == 7 || i == 9
+            kin_interp = fillmissing(kin_sim,'linear');
+            plot(t, rad2deg(kin_interp(:,i)), ...
+                 '--','Color',lcolor,'LineWidth',0.8);
+            h = plot(t, rad2deg(kin_sim(:,i)), ...
+                     '-','Color',lcolor,'LineWidth',lw);
+        else
+            h = plot(t, rad2deg(kin_sim(:,i)), ...
+                     '-','Color',lcolor,'LineWidth',lw);
+        end
+
+        if i == 1
+            hLeg(isim+1) = h;
+            names{isim+1} = lname;
+        end
+
+        % Coordination values, printed once per simulation
+        if i == 1
+            GH  = rotyzy(S.data.trajectories(:,9:12));
+            fro = [1,41];
+            sca = [101,135];
+            sag = [204,236];
+
+            [S_fro,i_fro] = compute_SCHR(kin_sim(fro(1):fro(2),8)*180/pi, ...
+                                         kin_sim(fro(1):fro(2),5)*180/pi, ...
+                                         GH(fro(1):fro(2))*180/pi);
+            [S_sca,i_sca] = compute_SCHR(kin_sim(sca(1):sca(2),8)*180/pi, ...
+                                         kin_sim(sca(1):sca(2),5)*180/pi, ...
+                                         GH(sca(1):sca(2))*180/pi);
+            [S_sag,i_sag] = compute_SCHR(kin_sim(sag(1):sag(2),8)*180/pi, ...
+                                         kin_sim(sag(1):sag(2),5)*180/pi, ...
+                                         GH(sag(1):sag(2))*180/pi);
+
+            print_SCHR(['Frontal / '  lname], S_fro, i_fro);
+            print_SCHR(['Scapular / ' lname], S_sca, i_sca);
+            print_SCHR(['Sagittal / ' lname], S_sag, i_sag);
+        end
     end
 
-    if i ~= 3
-        plot(t, rad2deg(kin_exp(:,i)), exp_style{:}); hold on
-    end
-
-    if i == 7 || i == 9
-        kin_healthy_interp = fillmissing(kin_healthy,'linear');
-        plot(t, rad2deg(kin_healthy_interp(:,i))); hold on
-        plot(t, rad2deg(kin_healthy(:,i))); hold on
-
-        % kin_RC_interp = fillmissing(kin_RC,'linear');
-        % plot(t, rad2deg(kin_RC_interp(:,i)), RC_interp_style{:}); hold on
-        % plot(t, rad2deg(kin_RC(:,i)), RC_style{:});
-    else
-        plot(t, rad2deg(kin_healthy(:,i)));
-        % plot(t, rad2deg(kin_RC(:,i)), RC_style{:});
-    end
-    
-
-    title(labels{i});
-    xlabel(['Time (s)',newline,'']);
+    % ---------- Panel formatting ----------
+    title(labels{i},'FontSize',8,'FontWeight','normal');
+    xlabel(['Time (s)' newline '']);
     ylabel('Angle (deg)');
-
     xlim([t(1) t(end)]);
     set(gca,'FontSize',8,'LineWidth',0.2);
-    text(0.5, -0.55, ['(',alphabet{i},')'], 'Units', 'normalized', ...
-    'VerticalAlignment', 'top', 'HorizontalAlignment', 'center', ...
-    'FontName', 'Times New Roman', 'FontSize', 8);
+
+    text(0.5,-0.55,['(' alphabet{i} ')'],'Units','normalized', ...
+         'VerticalAlignment','top','HorizontalAlignment','center', ...
+         'FontName','Times New Roman','FontSize',8);
+end
+
+% ---------- Predicted and tracked annotations ----------
+annotation('line',[0.96 0.96],[0.41 0.97],'Color',[0.6 0.6 0.6],'LineWidth',1);
+annotation('line',[0.95 0.96],[0.97 0.97],'Color',[0.6 0.6 0.6],'LineWidth',1);
+annotation('line',[0.95 0.96],[0.41 0.41],'Color',[0.6 0.6 0.6],'LineWidth',1);
+annotation('textbox',[0.96 0.67 0 0],'String','Predicted','EdgeColor','none', ...
+           'Rotation',90,'FontSize',15,'FontAngle','italic', ...
+           'HorizontalAlignment','center');
+
+annotation('line',[0.96 0.96],[0.10 0.35],'Color',[0.6 0.6 0.6],'LineWidth',1);
+annotation('line',[0.95 0.96],[0.10 0.10],'Color',[0.6 0.6 0.6],'LineWidth',1);
+annotation('line',[0.95 0.96],[0.35 0.35],'Color',[0.6 0.6 0.6],'LineWidth',1);
+annotation('textbox',[0.96 0.235 0 0],'String','Tracked','EdgeColor','none', ...
+           'Rotation',90,'FontSize',15,'FontAngle','italic', ...
+           'HorizontalAlignment','center');
+
+% ---------- Legend ----------
+valid = isgraphics(hLeg);
+lg = legend(hLeg(valid), names(valid), 'NumColumns', 3);
+lg.FontSize    = 8;
+lg.Box         = 'off';
+lg.Layout.Tile = 'south';
+lg.Orientation = 'horizontal';
+
+% exportgraphics(gcf,'zoufa5_new.png','Resolution',600);
+end
+
+% function plot_IEEE_kinematics(kinematics, varargin)
+% 
+% labels = { ...
+%     'Clavicle protraction/retraction', 'Clavicle elevation','Clavicle axial rotation', ...
+%     'Scapula internal/external rotation','Scapula upward/downward rotation','Scapula anterior/posterior tilting', ...
+%     'Humerus plane of elevation','Humerus elevation','Humerus axial rotation'};
+% 
+% % ---------- Figure setup ----------
+% figure('Color','w','Units','inches','Position',[1 1 7.16 4.3]);
+% tiledlayout(3,3,'TileSpacing','compact','Padding','compact');
+% % 
+% % % ---------- Line styles ----------
+% lw = 1.6;
+% exp_style     = {'Color',[0.5 0.5 0.5],'LineWidth',1.2};                 % IK (feasible)
+% healthy_style = {'-','Color','blue','LineWidth',lw};
+% healthy_interp_style = {'--','Color','blue','LineWidth',0.8};
+% RC_style      = {'-','Color','red','LineWidth',lw};
+% RC_interp_style = {'--','Color','red','LineWidth',0.8};
+% alphabet = {'a','b','c','d','e','f','g','h','i','i'};
+% names = {'Experimental trajectory'};
+% for i = 1:9
+%     nexttile; hold on; box on;
+% 
+%     for isim = 1:length(varargin)
+%     healthys = varargin{isim};
+%     healthy_struct = load(['Motions\',healthys{5},'\',healthys{3},'\',healthys{1},'.mat']);
+% 
+%     name_healthy = healthys{6};
+%     if i == 1
+%         names{end+1} = name_healthy;
+%     end
+%     t            = healthy_struct.data.tout;
+% 
+%     kin_exp      = kinematics.mot_struct.euler;
+%     kin_exp = interp1(kinematics.mot_struct.time,kin_exp,t,"spline");
+%     kin_exp = create_objective_traj_eul(kin_exp,'YZY',0);
+% 
+%     kin_healthy_loc  = quat2eul_motion(healthy_struct.data.trajectories,'YZY');
+%     kin_healthy = create_objective_traj_eul(kin_healthy_loc,'YZY',1);
+%     GH_healthy = rotyzy(healthy_struct.data.trajectories(:,9:12));
+% 
+%     if i == 1
+%         fro = [1,41];
+%         sca = [101,135];
+%         sag = [204, 236];
+%         [SCHR_frontal,info_frontal] = compute_SCHR(kin_healthy(fro(1):fro(2),8)*180/pi,kin_healthy(fro(1):fro(2),5)*180/pi,GH_healthy(fro(1):fro(2))*180/pi);
+%         [SCHR_scapular,info_scapular] = compute_SCHR(kin_healthy(sca(1):sca(2),8)*180/pi,kin_healthy(sca(1):sca(2),5)*180/pi,GH_healthy(sca(1):sca(2))*180/pi);
+%         [SCHR_sagittal,info_sagittal] = compute_SCHR(kin_healthy(sag(1):sag(2),8)*180/pi,kin_healthy(sag(1):sag(2),5)*180/pi,GH_healthy(sag(1):sag(2))*180/pi);
+%         print_SCHR(['Frontal / '  name_healthy], SCHR_frontal,info_frontal);
+%         print_SCHR(['Scapular / ' name_healthy], SCHR_scapular,info_scapular);
+%         print_SCHR(['Sagittal / ' name_healthy], SCHR_sagittal,info_sagittal);
+%     end
+% 
+%     if i ~= 3
+%         plot(t, rad2deg(kin_exp(:,i)), exp_style{:}); hold on
+%     end
+% 
+%     if i == 7 || i == 9
+%         kin_healthy_interp = fillmissing(kin_healthy,'linear');
+%         plot(t, rad2deg(kin_healthy_interp(:,i))); hold on
+%         plot(t, rad2deg(kin_healthy(:,i))); hold on
+% 
+%     else
+%         plot(t, rad2deg(kin_healthy(:,i)));
+%     end
+% 
+% 
+%     title(labels{i});
+%     xlabel(['Time (s)',newline,'']);
+%     ylabel('Angle (deg)');
+% 
+%     xlim([t(1) t(end)]);
+%     set(gca,'FontSize',8,'LineWidth',0.2);
+%     text(0.5, -0.55, ['(',alphabet{i},')'], 'Units', 'normalized', ...
+%     'VerticalAlignment', 'top', 'HorizontalAlignment', 'center', ...
+%     'FontName', 'Times New Roman', 'FontSize', 8);
+%     end
+% end
+% 
+% % "predicted" annotation
+% annotation('line', [0.96 0.96], [0.41 0.97], ...
+%     'Color', [0.6 0.6 0.6], 'LineWidth', 1);
+% annotation('line', [0.95 0.96], [0.97 0.97], ...
+%     'Color', [0.6 0.6 0.6], 'LineWidth', 1);
+% annotation('line', [0.95 0.96], [0.41 0.41], ...
+%     'Color', [0.6 0.6 0.6], 'LineWidth', 1);
+% 
+% annotation('textbox', [0.96 0.67 0.0 0.0], ...
+%     'String', 'Predicted', ...
+%     'EdgeColor', 'none', ...
+%     'Rotation', 90, ...
+%     'FontSize', 15, ...
+%     'FontAngle', 'italic', ...
+%     'HorizontalAlignment', 'center');
+% 
+% 
+% % "tracked" annotation
+% annotation('line', [0.96 0.96], [0.10 0.35], ...
+%     'Color', [0.6 0.6 0.6], 'LineWidth', 1);
+% annotation('line', [0.95 0.96], [0.10 0.10], ...
+%     'Color', [0.6 0.6 0.6], 'LineWidth', 1);
+% annotation('line', [0.95 0.96], [0.35 0.35], ...
+%     'Color', [0.6 0.6 0.6], 'LineWidth', 1);
+% 
+% annotation('textbox', [0.96 0.235 0.0 0.0], ...
+%     'String', 'Tracked', ...
+%     'EdgeColor', 'none', ...
+%     'Rotation', 90, ...
+%     'FontSize', 15, ...
+%     'FontAngle', 'italic', ...
+%     'HorizontalAlignment', 'center');
+% % names
+% % ---------- Legend ----------
+% lg = legend(names,'NumColumns',3); %, ...
+%              % 'Orientation','horizontal', ...
+%              % 'Location','southoutside');
+% lg.FontSize = 8;
+% lg.Box = 'off';
+% lg.Layout.Tile = 'south';
+% lg.Orientation = 'horizontal';
+% set(gca, 'LineWidth',0.2)
+% 
+% figure
+% plot(t,rad2deg(GH_healthy)); hold on
+% xline(t(sca(1))); hold on
+% xline(t(sag(1)))
+% % plot(t,rad2deg(kin_healthy_loc(:,7)));
+% 
+% % exportgraphics(gcf,'zoufa5_new.png','Resolution',600);
+% 
+% end
+% 
+function plot_IEEE_kinematics_2DoFs_RCSA(kinematics)
+% Rotator cuff capacity sensitivity. Two degrees of freedom by three
+% impairment cases. Colour encodes remaining force capacity. The
+% glenohumeral stability weight required to keep the joint centred is
+% given in the legend next to each capacity level.
+
+% ---------- Labels ----------
+labels = { ...
+    ['Clavicle',newline,'elevation (deg)'], ...
+    ['Scapula upward',newline,'rotation (deg)']};
+
+case_titles = {'Supraspinatus', 'Infraspinatus', 'Supraspinatus + infraspinatus'};
+
+RC_cases    = {'supra','infra','RClim'};
+limitations = {'100','75','50','25','0'};
+wGHs = { {'2','2','2','2','4'}, ...
+         {'2','2','2','4','6'}, ...
+         {'2','2','4','6','10'} };
+
+cap_colors = [
+    0.00 0.45 0.74;
+    0.35 0.35 0.72;
+    0.58 0.27 0.62;
+    0.75 0.20 0.45;
+    0.85 0.33 0.10];
+
+DoFs     = [2, 5];
+alphabet = {'a','b','c','d','e','f'};
+lw       = 1.6;
+
+% ---------- Figure setup ----------
+figure('Color','w','Units','inches','Position',[1 1 7.16 4.3/3*2]);
+tl = tiledlayout(2,3,'TileSpacing','compact','Padding','compact');
+
+hLeg    = gobjects(6,1);   % one handle per legend entry
+legDone = false;
+ipanel  = 0;
+
+for idof = 1:2
+    for ilim = 1:3
+
+        ipanel = ipanel + 1;
+        nexttile; hold on; box on;
+
+        wGHs_cur = wGHs{ilim};
+
+        for isim = 1:5
+
+            if isim == 1
+                S = load('Motions\par2\All_elevations\res_SHR_0.mat');
+            else
+                S = load(['Motions\par2\All_elevations\res_SHR_', ...
+                          RC_cases{ilim}, limitations{isim}, ...
+                          '_All_elevations_wGH', wGHs_cur{isim}, '.mat']);
+            end
+
+            t = S.data.tout;
+
+            kin_loc = quat2eul_motion(S.data.trajectories,'YZY');
+            kin_sim = create_objective_traj_eul(kin_loc,'YZY',1);
+
+            DoF = DoFs(idof);
+
+            if isim == 1
+                kin_exp = interp1(kinematics.mot_struct.time, ...
+                                  kinematics.mot_struct.euler, t, 'spline');
+                kin_exp = create_objective_traj_eul(kin_exp,'YZY',0);
+
+                h = plot(t, rad2deg(kin_exp(:,DoF)), ...
+                         'Color',[0.5 0.5 0.5],'LineWidth',1.2);
+                if ~legDone, hLeg(1) = h; end
+
+                h = plot(t, rad2deg(kin_sim(:,DoF)), ...
+                         'Color',cap_colors(isim,:),'LineWidth',1.8);
+                if ~legDone, hLeg(2) = h; end
+            else
+                h = plot(t, rad2deg(kin_sim(:,DoF)), ...
+                         'Color',cap_colors(isim,:),'LineWidth',1.2);
+                if ~legDone, hLeg(isim+1) = h; end
+            end
+        end
+
+        legDone = true;
+
+        % ---------- Panel formatting ----------
+        set(gca,'FontSize',8,'LineWidth',0.5,'TickDir','out','Layer','top');
+        xlim([t(1) t(end)]);
+
+        if idof == 1
+            title(case_titles{ilim},'FontSize',9,'FontWeight','normal');
+            ylim([0,20])
+        end
+        if idof == 2
+            xlabel('Time (s)','FontSize',8);
+            ylim([0,50])
+        else
+            set(gca,'XTickLabel',[]);
+        end
+        if ilim == 1
+            ylabel(labels{idof},'FontSize',8);
+        end
+
+        % Panel letter
+        text(0.02,0.96,['(' alphabet{ipanel} ')'], ...
+             'Units','normalized','FontSize',8, ...
+             'VerticalAlignment','top','HorizontalAlignment','left');
+
+        % Weight annotation, one line per panel
+        text(0.98,0.96, ...
+             ['w_{GH} = ' strjoin(wGHs_cur,', ')], ...
+             'Units','normalized','FontSize',7,'Color',[0.35 0.35 0.35], ...
+             'VerticalAlignment','top','HorizontalAlignment','right');
     end
 end
 
-% "predicted" annotation
-annotation('line', [0.96 0.96], [0.41 0.97], ...
-    'Color', [0.6 0.6 0.6], 'LineWidth', 1);
-annotation('line', [0.95 0.96], [0.97 0.97], ...
-    'Color', [0.6 0.6 0.6], 'LineWidth', 1);
-annotation('line', [0.95 0.96], [0.41 0.41], ...
-    'Color', [0.6 0.6 0.6], 'LineWidth', 1);
-
-annotation('textbox', [0.96 0.67 0.0 0.0], ...
-    'String', 'Predicted', ...
-    'EdgeColor', 'none', ...
-    'Rotation', 90, ...
-    'FontSize', 15, ...
-    'FontAngle', 'italic', ...
-    'HorizontalAlignment', 'center');
-
-
-% "tracked" annotation
-annotation('line', [0.96 0.96], [0.10 0.35], ...
-    'Color', [0.6 0.6 0.6], 'LineWidth', 1);
-annotation('line', [0.95 0.96], [0.10 0.10], ...
-    'Color', [0.6 0.6 0.6], 'LineWidth', 1);
-annotation('line', [0.95 0.96], [0.35 0.35], ...
-    'Color', [0.6 0.6 0.6], 'LineWidth', 1);
-
-annotation('textbox', [0.96 0.235 0.0 0.0], ...
-    'String', 'Tracked', ...
-    'EdgeColor', 'none', ...
-    'Rotation', 90, ...
-    'FontSize', 15, ...
-    'FontAngle', 'italic', ...
-    'HorizontalAlignment', 'center');
-% names
-% ---------- Legend ----------
-lg = legend(names,'NumColumns',3); %, ...
-             % 'Orientation','horizontal', ...
-             % 'Location','southoutside');
-lg.FontSize = 8;
-lg.Box = 'off';
-lg.Layout.Tile = 'south';
-lg.Orientation = 'horizontal';
-set(gca, 'LineWidth',0.2)
-
-figure
-plot(t,rad2deg(GH_healthy)); hold on
-xline(t(sca(1))); hold on
-xline(t(sag(1)))
-% plot(t,rad2deg(kin_healthy_loc(:,7)));
-
-% exportgraphics(gcf,'zoufa5_new.png','Resolution',600);
-    
+% Common y limits within each row, so the rows are comparable
+ax = findall(gcf,'Type','axes');
+ax = flipud(ax);
+for irow = 1:2
+    idx = (irow-1)*3 + (1:3);
+    yl  = cell2mat(get(ax(idx),'YLim'));
+    set(ax(idx),'YLim',[min(yl(:,1)) max(yl(:,2))]);
 end
+
+% ---------- Legend ----------
+names = {'Experimental trajectory', ...
+         'Full capacity (100%)', ...
+         '75% capacity', ...
+         '50% capacity', ...
+         '25% capacity', ...
+         'No capacity (0%)'};
+
+lg = legend(hLeg, names, 'NumColumns', 3);
+lg.FontSize    = 8;
+lg.Box         = 'off';
+lg.Layout.Tile = 'south';
+
+% exportgraphics(gcf,'zoufa_RC_sensitivity.png','Resolution',600);
+end
+
+% function plot_IEEE_kinematics_2DoFs(kinematics)
+% 
+% 
+% 
+% labels = { ...
+%     'Clavicle elevation', ...
+%     'Scapula upward/downward rotation'};
+% 
+% % ---------- Figure setup ----------
+% figure('Color','w','Units','inches','Position',[1 1 7.16 4.3]);
+% tiledlayout(2,3,'TileSpacing','compact','Padding','compact');
+% % 
+% % % ---------- Line styles ----------
+% lw = 1.6;
+% exp_style     = {'Color',[0.5 0.5 0.5],'LineWidth',1.2};                 % IK (feasible)
+% healthy_style = {'-','Color','blue','LineWidth',lw};
+% healthy_interp_style = {'--','Color','blue','LineWidth',0.8};
+% RC_style      = {'-','Color','red','LineWidth',lw};
+% RC_interp_style = {'--','Color','red','LineWidth',0.8};
+% alphabet = {'a','b','c','d','e','f','g','h','i','i'};
+% names = {'Experimental trajectory'};
+% RC_cases = {'supra','infra','RClim'};
+% wGHs = {{'2','2','2','2','4'},{'2','2','2','4','6'},{'2','2','4','6','10'}};
+% limitations = {'100','75','50','25','0'};
+% cap_colors = [
+%     0.00 0.45 0.74;
+%     0.35 0.35 0.72;
+%     0.58 0.27 0.62;
+%     0.75 0.20 0.45;
+%     0.85 0.33 0.10];
+% DoFs = [2,5];
+% for idof = 1:2
+%     for ilim = 1:3
+%         nexttile; hold on; box on;
+% 
+%         for isim = 1:5
+%             wGHs_cur = wGHs{ilim};
+%             if isim == 1
+%                 healthy_struct = load(['Motions\par2\All_elevations\res_SHR_0.mat']);
+%             else
+%                 healthy_struct = load(['Motions\par2\All_elevations\res_SHR_',RC_cases{ilim},limitations{isim},'_All_elevations_wGH',wGHs_cur{isim},'.mat']);
+%             end
+%             t            = healthy_struct.data.tout;
+% 
+%             kin_exp      = kinematics.mot_struct.euler;
+%             kin_exp = interp1(kinematics.mot_struct.time,kin_exp,t,"spline");
+%             kin_exp = create_objective_traj_eul(kin_exp,'YZY',0);
+% 
+%             kin_healthy_loc  = quat2eul_motion(healthy_struct.data.trajectories,'YZY');
+%             kin_healthy = create_objective_traj_eul(kin_healthy_loc,'YZY',1);
+%             DoF = DoFs(idof);
+%             if isim == 1
+%                 plot(t,rad2deg(kin_exp(:,DoF)),'Color',[0.5,0.5,0.5],'LineWidth',1.2); hold on
+%                 plot(t, rad2deg(kin_healthy(:,DoF)),'Color',cap_colors(isim,:),'LineWidth',1.8); hold on
+%             else
+%                 plot(t, rad2deg(kin_healthy(:,DoF)),'Color',cap_colors(isim,:),'LineWidth',1.2); hold on
+%             end
+% 
+% 
+%         end
+%     end
+% end
+% 
+% % "predicted" annotation
+% % ---------- Legend ----------
+% lg = legend(names,'NumColumns',3); %, ...
+%              % 'Orientation','horizontal', ...
+%              % 'Location','southoutside');
+% lg.FontSize = 8;
+% lg.Box = 'off';
+% lg.Layout.Tile = 'south';
+% lg.Orientation = 'horizontal';
+% set(gca, 'LineWidth',0.2)
+% 
+% 
+% % exportgraphics(gcf,'zoufa5_new.png','Resolution',600);
+% 
+% 
+% end
 
 function print_SCHR(name, SCHR, info)
 fprintf('\n%s\n', name);
